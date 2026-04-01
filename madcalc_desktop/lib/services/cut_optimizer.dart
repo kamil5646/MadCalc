@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart' show listEquals;
-
 import '../models/bar_plan.dart';
 import '../models/cut_item.dart';
 import '../models/cut_settings.dart';
@@ -158,9 +156,17 @@ class CutOptimizer {
     required List<BarPlan> upperBoundBars,
   }) {
     final adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm;
-    final adjustedWeights = cuts
-        .map((cut) => cut + settings.sawThicknessMm)
-        .toList();
+    final groupedCuts = <int, int>{};
+    for (final cut in cuts) {
+      groupedCuts.update(cut, (count) => count + 1, ifAbsent: () => 1);
+    }
+    final lengths = groupedCuts.keys.toList()
+      ..sort((left, right) => right.compareTo(left));
+    final initialCounts = [for (final length in lengths) groupedCuts[length]!];
+    final adjustedWeights = [
+      for (final length in lengths) length + settings.sawThicknessMm,
+    ];
+
     var bestBarCount = upperBoundBars.length;
     if (lowerBound >= bestBarCount) {
       return null;
@@ -171,113 +177,180 @@ class CutOptimizer {
         [...bar.cutsMm]..sort((left, right) => right.compareTo(left)),
     ];
 
-    final suffixAdjustedWeights = List<int>.filled(cuts.length + 1, 0);
-    for (var index = cuts.length - 1; index >= 0; index--) {
-      suffixAdjustedWeights[index] =
-          suffixAdjustedWeights[index + 1] + adjustedWeights[index];
+    final currentPatterns = <_BarPattern>[];
+    final patternCache = <_PatternState, List<_BarPattern>>{};
+    final bestBarsUsedForState = <_PatternState, int>{};
+
+    int lowerBoundFor(List<int> counts) {
+      var remainingAdjustedWeight = 0;
+      for (var index = 0; index < counts.length; index++) {
+        remainingAdjustedWeight += counts[index] * adjustedWeights[index];
+      }
+      if (remainingAdjustedWeight == 0) {
+        return 0;
+      }
+      return (remainingAdjustedWeight + adjustedCapacity - 1) ~/
+          adjustedCapacity;
     }
 
-    final bars = <_SearchBar>[];
-    final failedStates = <_SearchState>{};
+    List<int> expandPattern(_BarPattern pattern) {
+      final bar = <int>[];
+      for (var index = 0; index < pattern.counts.length; index++) {
+        bar.addAll(List<int>.filled(pattern.counts[index], lengths[index]));
+      }
+      return bar;
+    }
 
-    int lowerBoundForRemaining(int cutIndex) {
-      final remainingAdjustedWeight = suffixAdjustedWeights[cutIndex];
-      final freeCapacityInOpenBars = bars.fold<int>(
+    bool hasRemainingCutThatFits({
+      required List<int> remainingCounts,
+      required List<int> selectedCounts,
+      required int remainingCapacity,
+    }) {
+      for (var index = 0; index < remainingCounts.length; index++) {
+        if (remainingCounts[index] > selectedCounts[index] &&
+            adjustedWeights[index] <= remainingCapacity) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    bool isBetterPattern({
+      required _BarPattern candidate,
+      required _BarPattern current,
+    }) {
+      if (candidate.adjustedUsed != current.adjustedUsed) {
+        return candidate.adjustedUsed > current.adjustedUsed;
+      }
+
+      final candidatePieces = candidate.counts.fold<int>(
         0,
-        (sum, bar) => sum + (adjustedCapacity - bar.adjustedUsed),
+        (sum, count) => sum + count,
       );
-      final overflow = remainingAdjustedWeight - freeCapacityInOpenBars;
-      final additionalBars = overflow <= 0
-          ? 0
-          : (overflow + adjustedCapacity - 1) ~/ adjustedCapacity;
-      return bars.length + additionalBars;
+      final currentPieces = current.counts.fold<int>(
+        0,
+        (sum, count) => sum + count,
+      );
+      if (candidatePieces != currentPieces) {
+        return candidatePieces > currentPieces;
+      }
+
+      for (var index = 0; index < candidate.counts.length; index++) {
+        if (candidate.counts[index] != current.counts[index]) {
+          return candidate.counts[index] > current.counts[index];
+        }
+      }
+
+      return false;
     }
 
-    void dfs(int cutIndex) {
-      if (bars.length >= bestBarCount) {
+    List<_BarPattern> patternsFor(_PatternState state) {
+      final cached = patternCache[state];
+      if (cached != null) {
+        return cached;
+      }
+
+      final anchorIndex = state.remainingCounts.indexWhere(
+        (count) => count > 0,
+      );
+      if (anchorIndex == -1) {
+        return const [];
+      }
+
+      final selectedCounts = List<int>.filled(lengths.length, 0);
+      selectedCounts[anchorIndex] = 1;
+      final generated = <_BarPattern>[];
+
+      void buildPattern(int index, int adjustedUsed) {
+        if (index == lengths.length) {
+          final remainingCapacity = adjustedCapacity - adjustedUsed;
+          if (!hasRemainingCutThatFits(
+            remainingCounts: state.remainingCounts,
+            selectedCounts: selectedCounts,
+            remainingCapacity: remainingCapacity,
+          )) {
+            generated.add(
+              _BarPattern(
+                counts: List<int>.from(selectedCounts),
+                adjustedUsed: adjustedUsed,
+              ),
+            );
+          }
+          return;
+        }
+
+        final available = state.remainingCounts[index] - selectedCounts[index];
+        final maxTake =
+            available <
+                ((adjustedCapacity - adjustedUsed) ~/ adjustedWeights[index])
+            ? available
+            : ((adjustedCapacity - adjustedUsed) ~/ adjustedWeights[index]);
+
+        for (var take = maxTake; take >= 0; take--) {
+          selectedCounts[index] += take;
+          buildPattern(
+            index + 1,
+            adjustedUsed + (take * adjustedWeights[index]),
+          );
+          selectedCounts[index] -= take;
+        }
+      }
+
+      buildPattern(anchorIndex, adjustedWeights[anchorIndex]);
+      generated.sort((left, right) {
+        if (isBetterPattern(candidate: left, current: right)) {
+          return -1;
+        }
+        if (isBetterPattern(candidate: right, current: left)) {
+          return 1;
+        }
+        return 0;
+      });
+      patternCache[state] = generated;
+      return generated;
+    }
+
+    void search(_PatternState state, int barsUsed) {
+      if (barsUsed >= bestBarCount) {
         return;
       }
-      if (cutIndex == cuts.length) {
-        bestBarCount = bars.length;
+
+      if (!state.remainingCounts.any((count) => count > 0)) {
+        bestBarCount = barsUsed;
         bestPacking = [
-          for (final bar in bars)
-            [...bar.cuts]..sort((left, right) => right.compareTo(left)),
+          for (final pattern in currentPatterns) expandPattern(pattern),
         ];
         return;
       }
 
-      if (lowerBoundForRemaining(cutIndex) >= bestBarCount) {
+      final stateLowerBound = lowerBoundFor(state.remainingCounts);
+      if (barsUsed + stateLowerBound >= bestBarCount) {
         return;
       }
 
-      final state = _SearchState(
-        cutIndex,
-        (bars.map((bar) => bar.adjustedUsed).toList()..sort()),
-      );
-      if (failedStates.contains(state)) {
+      final bestSeen = bestBarsUsedForState[state];
+      if (bestSeen != null && bestSeen <= barsUsed) {
         return;
       }
+      bestBarsUsedForState[state] = barsUsed;
 
-      final cut = cuts[cutIndex];
-      final adjustedWeight = adjustedWeights[cutIndex];
-      final candidateIndices =
-          bars
-              .asMap()
-              .entries
-              .where(
-                (entry) =>
-                    entry.value.adjustedUsed + adjustedWeight <=
-                    adjustedCapacity,
-              )
-              .map((entry) => entry.key)
-              .toList()
-            ..sort((left, right) {
-              final leftRemaining =
-                  adjustedCapacity - (bars[left].adjustedUsed + adjustedWeight);
-              final rightRemaining =
-                  adjustedCapacity -
-                  (bars[right].adjustedUsed + adjustedWeight);
-              if (leftRemaining != rightRemaining) {
-                return leftRemaining.compareTo(rightRemaining);
-              }
-              if (bars[left].adjustedUsed != bars[right].adjustedUsed) {
-                return bars[right].adjustedUsed.compareTo(
-                  bars[left].adjustedUsed,
-                );
-              }
-              return left.compareTo(right);
-            });
-
-      final triedLoads = <int>{};
-
-      for (final index in candidateIndices) {
-        final previousLoad = bars[index].adjustedUsed;
-        if (!triedLoads.add(previousLoad)) {
-          continue;
+      for (final pattern in patternsFor(state)) {
+        final nextCounts = List<int>.from(state.remainingCounts);
+        for (var index = 0; index < nextCounts.length; index++) {
+          nextCounts[index] -= pattern.counts[index];
         }
 
-        bars[index].cuts.add(cut);
-        bars[index].adjustedUsed += adjustedWeight;
+        currentPatterns.add(pattern);
+        search(_PatternState(nextCounts), barsUsed + 1);
+        currentPatterns.removeLast();
 
-        dfs(cutIndex + 1);
-        bars[index].cuts.removeLast();
-        bars[index].adjustedUsed -= adjustedWeight;
+        if (bestBarCount == barsUsed + stateLowerBound) {
+          break;
+        }
       }
-
-      if (bars.length + 1 < bestBarCount) {
-        bars.add(
-          _SearchBar()
-            ..cuts.add(cut)
-            ..adjustedUsed = adjustedWeight,
-        );
-        dfs(cutIndex + 1);
-        bars.removeLast();
-      }
-
-      failedStates.add(state);
     }
 
-    dfs(0);
+    search(_PatternState(initialCounts), 0);
     return bestBarCount < upperBoundBars.length ? bestPacking : null;
   }
 
@@ -430,29 +503,37 @@ class _BarSelection {
   final int wasteMm;
 }
 
-class _SearchBar {
-  final List<int> cuts = <int>[];
-  int adjustedUsed = 0;
-}
+class _PatternState {
+  const _PatternState(this.remainingCounts);
 
-class _SearchState {
-  const _SearchState(this.index, this.adjustedLoads);
-
-  final int index;
-  final List<int> adjustedLoads;
+  final List<int> remainingCounts;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) {
       return true;
     }
-    return other is _SearchState &&
-        other.index == index &&
-        listEquals(other.adjustedLoads, adjustedLoads);
+    if (other is! _PatternState ||
+        other.remainingCounts.length != remainingCounts.length) {
+      return false;
+    }
+    for (var index = 0; index < remainingCounts.length; index++) {
+      if (other.remainingCounts[index] != remainingCounts[index]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override
-  int get hashCode => Object.hash(index, Object.hashAll(adjustedLoads));
+  int get hashCode => Object.hashAll(remainingCounts);
+}
+
+class _BarPattern {
+  const _BarPattern({required this.counts, required this.adjustedUsed});
+
+  final List<int> counts;
+  final int adjustedUsed;
 }
 
 Map<String, dynamic> optimizeCutsInBackground(Map<String, dynamic> payload) {
