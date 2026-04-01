@@ -311,7 +311,7 @@ class MadCalcController extends ChangeNotifier {
           'unit': unit.name,
           'generatedAt': currentGeneratedAt.toIso8601String(),
         },
-      ).timeout(const Duration(seconds: 20));
+      ).timeout(_pdfExportTimeout(currentResult));
       final path = location.path.toLowerCase().endsWith('.pdf')
           ? location.path
           : '${location.path}.pdf';
@@ -320,7 +320,7 @@ class MadCalcController extends ChangeNotifier {
       lastExportPath = path;
       return 'PDF zapisany w: $path';
     } on TimeoutException {
-      return 'Tworzenie PDF trwało zbyt długo. Spróbuj skrócić raport i ponowić eksport.';
+      return 'Tworzenie PDF trwało wyjątkowo długo. Spróbuj ponowić eksport, ale raport nie powinien już wywalać się tylko dlatego, że jest większy.';
     } catch (_) {
       return 'Nie udało się zapisać raportu PDF.';
     } finally {
@@ -422,6 +422,16 @@ class MadCalcController extends ChangeNotifier {
         ),
       ),
     );
+  }
+
+  Duration _pdfExportTimeout(OptimizationResult result) {
+    final baseSeconds = switch (Platform.operatingSystem) {
+      'windows' => 180,
+      'android' => 90,
+      _ => 60,
+    };
+    final extraSeconds = ((result.bars.length / 50).ceil()) * 15;
+    return Duration(seconds: baseSeconds + extraSeconds);
   }
 
   String _convertDisplayedValue(

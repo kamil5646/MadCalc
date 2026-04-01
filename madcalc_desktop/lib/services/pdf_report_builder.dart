@@ -9,6 +9,8 @@ import '../models/measurement_unit.dart';
 import '../models/optimization_result.dart';
 
 class PdfReportBuilder {
+  static const int _maxPdfPages = 1000;
+
   Future<Uint8List> build({
     required List<CutItem> items,
     required CutSettings settings,
@@ -35,6 +37,7 @@ class PdfReportBuilder {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
+        maxPages: _maxPdfPages,
         margin: const pw.EdgeInsets.fromLTRB(24, 28, 24, 24),
         build: (context) {
           final sortedItems = [...items]
@@ -63,7 +66,7 @@ class PdfReportBuilder {
               ),
             ),
             pw.SizedBox(height: 14),
-            _buildTable(
+            ..._buildTableSections(
               title: 'Podsumowanie',
               headers: const ['Zakres', 'Wartość'],
               rows: [
@@ -85,9 +88,10 @@ class PdfReportBuilder {
                 pw.Alignment.centerLeft,
                 pw.Alignment.centerLeft,
               ],
+              rowsPerChunk: 12,
             ),
             pw.SizedBox(height: 12),
-            _buildTable(
+            ..._buildTableSections(
               title: 'Lista elementów',
               headers: const ['Długość', 'Ilość', 'Razem'],
               rows: sortedItems
@@ -105,9 +109,10 @@ class PdfReportBuilder {
                 pw.Alignment.center,
                 pw.Alignment.centerRight,
               ],
+              rowsPerChunk: 28,
             ),
             pw.SizedBox(height: 12),
-            _buildTable(
+            ..._buildTableSections(
               title: 'Plan cięcia',
               headers: const ['Nazwa', 'Cięcia', 'Elem.', 'Użycie', 'Odpad'],
               rows: _buildBarRows(result: result, unit: unit),
@@ -119,6 +124,7 @@ class PdfReportBuilder {
                 pw.Alignment.centerRight,
                 pw.Alignment.centerRight,
               ],
+              rowsPerChunk: 18,
             ),
           ];
         },
@@ -172,30 +178,55 @@ class PdfReportBuilder {
     return lines;
   }
 
-  pw.Widget _buildTable({
+  List<pw.Widget> _buildTableSections({
     required String title,
     required List<String> headers,
     required List<List<String>> rows,
     required List<double> columnFlex,
     required List<pw.Alignment> alignments,
+    required int rowsPerChunk,
   }) {
     final widths = <int, pw.TableColumnWidth>{
       for (var index = 0; index < columnFlex.length; index++)
         index: pw.FlexColumnWidth(columnFlex[index]),
     };
+    final normalizedRows =
+        (rows.isEmpty
+                ? <List<String>>[
+                    [
+                      'Brak danych.',
+                      ...List<String>.filled(headers.length - 1, ''),
+                    ],
+                  ]
+                : rows)
+            .map((row) {
+              final normalized = [...row];
+              while (normalized.length < headers.length) {
+                normalized.add('');
+              }
+              return normalized;
+            })
+            .toList();
+    final widgets = <pw.Widget>[];
+    final chunkSize = rowsPerChunk < 1 ? 1 : rowsPerChunk;
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
+    for (var start = 0; start < normalizedRows.length; start += chunkSize) {
+      final end = (start + chunkSize).clamp(0, normalizedRows.length);
+      final chunk = normalizedRows.sublist(start, end);
+      final chunkTitle = start == 0 ? title : '$title (cd.)';
+
+      widgets.add(
         pw.Text(
-          title,
+          chunkTitle,
           style: pw.TextStyle(
             fontSize: 11,
             fontWeight: pw.FontWeight.bold,
             color: PdfColor.fromHex('#17395E'),
           ),
         ),
-        pw.SizedBox(height: 6),
+      );
+      widgets.add(pw.SizedBox(height: 6));
+      widgets.add(
         pw.Table(
           columnWidths: widths,
           border: pw.TableBorder.all(
@@ -214,7 +245,7 @@ class PdfReportBuilder {
                   ),
               ],
             ),
-            for (final row in rows)
+            for (final row in chunk)
               pw.TableRow(
                 children: [
                   for (var index = 0; index < row.length; index++)
@@ -223,8 +254,14 @@ class PdfReportBuilder {
               ),
           ],
         ),
-      ],
-    );
+      );
+
+      if (end < normalizedRows.length) {
+        widgets.add(pw.SizedBox(height: 10));
+      }
+    }
+
+    return widgets;
   }
 
   pw.Widget _buildTableCell(
