@@ -43,7 +43,7 @@ struct PDFReportBuilder {
         format.documentInfo = [
             kCGPDFContextCreator as String: "MadCalc",
             kCGPDFContextAuthor as String: "MadCalc",
-            kCGPDFContextTitle as String: "Raport cięcia"
+            kCGPDFContextTitle as String: "Raport optymalizacji cięcia"
         ]
 
         let renderer = UIGraphicsPDFRenderer(bounds: PDFLayout.pageRect, format: format)
@@ -90,7 +90,7 @@ struct PDFReportBuilder {
 
             var barRows: [[String]] = []
             for bar in result.bars {
-                let cutLines = chunkedCuts(bar.cutsMm.map { unit.format($0) }, maxCharactersPerLine: 42)
+                let cutLines = chunkedCuts(bar.cutsMm.map { unit.format($0) }, maxCharactersPerLine: 46)
                 for (index, cutLine) in cutLines.enumerated() {
                     if index == 0 {
                         barRows.append([

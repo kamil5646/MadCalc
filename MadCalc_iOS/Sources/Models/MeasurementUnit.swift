@@ -1,6 +1,6 @@
 import Foundation
 
-enum MeasurementUnit: String, CaseIterable, Codable, Identifiable {
+enum MeasurementUnit: String, CaseIterable, Codable, Identifiable, Sendable {
     case centimeters
     case millimeters
 

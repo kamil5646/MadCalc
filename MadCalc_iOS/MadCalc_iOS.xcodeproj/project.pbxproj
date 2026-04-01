@@ -12,6 +12,7 @@
 		1751CDE3090277D903FC14FA /* MeasurementUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92966914D627B2DDF5ADE924 /* MeasurementUnit.swift */; };
 		653C78F3ADCAB52DAFB6733C /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48D553C2ACE8D551733F4151 /* ShareSheet.swift */; };
 		66E482431376642342B2B851 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7147A92CAFE31AD98BE6EC6B /* ContentView.swift */; };
+		67F6933DFC4CF0E86EA58D2F /* MeasurementUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07813A5E9A947FCDA6FBD42E /* MeasurementUnitTests.swift */; };
 		756956AF3936ACF426DEEA47 /* OptimizationResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E0F637413EB0D0DE9719EC /* OptimizationResult.swift */; };
 		776E52EBE7A438C0FAFD21F3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A76CBFD9ACDF613196722994 /* Assets.xcassets */; };
 		9A03CCBA637E111871E38500 /* MadCalcApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4721D7591CE1885C90AA2C40 /* MadCalcApp.swift */; };
@@ -20,19 +21,33 @@
 		C3F0D91ABEFE1283A21785CF /* ShareFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 791749B9A50A954D666C7DF0 /* ShareFile.swift */; };
 		D91E84DD94BDB9D66A36A775 /* CutOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F014475800CB7F129EF0F172 /* CutOptimizer.swift */; };
 		D9FD08A878D135F8824EFFF5 /* AlertState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5658FB792FCDED2CA2E6850D /* AlertState.swift */; };
+		E46954EA81400ADE4ACCF818 /* CutOptimizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600F4DB4E90C93330FD6B259 /* CutOptimizerTests.swift */; };
 		F8484FD2B1887420A4D8BA25 /* CutItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313D3F0D9874FB9326CC21E1 /* CutItem.swift */; };
 		FE48F7829FE8E99F4505B8D5 /* PDFReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D00EFEB4F2BF95094DBD83 /* PDFReportBuilder.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		950DF3D8D42F6B8C6B0F0C28 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 39A4AE6D55FEFE57B2F6CB2F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FB7D13E59A55B3C0142B6249;
+			remoteInfo = MadCalc;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-		10DC87F7BC39C0B12DF016AF /* MadCalc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MadCalc.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		07813A5E9A947FCDA6FBD42E /* MeasurementUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementUnitTests.swift; sourceTree = "<group>"; };
+		10DC87F7BC39C0B12DF016AF /* MadCalc.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MadCalc.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		17014C8B2C959482B20B894E /* StatePersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatePersistence.swift; sourceTree = "<group>"; };
 		313D3F0D9874FB9326CC21E1 /* CutItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CutItem.swift; sourceTree = "<group>"; };
 		32D00EFEB4F2BF95094DBD83 /* PDFReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFReportBuilder.swift; sourceTree = "<group>"; };
 		4721D7591CE1885C90AA2C40 /* MadCalcApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MadCalcApp.swift; sourceTree = "<group>"; };
 		48D553C2ACE8D551733F4151 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		5658FB792FCDED2CA2E6850D /* AlertState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertState.swift; sourceTree = "<group>"; };
+		600F4DB4E90C93330FD6B259 /* CutOptimizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CutOptimizerTests.swift; sourceTree = "<group>"; };
 		624C712BBBF070DE9EB1E15A /* MadCalcViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MadCalcViewModel.swift; sourceTree = "<group>"; };
+		67598298CD4358255FC01B1D /* MadCalcTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MadCalcTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7147A92CAFE31AD98BE6EC6B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		73E0F637413EB0D0DE9719EC /* OptimizationResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimizationResult.swift; sourceTree = "<group>"; };
 		791749B9A50A954D666C7DF0 /* ShareFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareFile.swift; sourceTree = "<group>"; };
@@ -50,6 +65,15 @@
 				A76CBFD9ACDF613196722994 /* Assets.xcassets */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		35D3CE8533583D34D1520CBD /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				600F4DB4E90C93330FD6B259 /* CutOptimizerTests.swift */,
+				07813A5E9A947FCDA6FBD42E /* MeasurementUnitTests.swift */,
+			);
+			path = Tests;
 			sourceTree = "<group>";
 		};
 		3A54E9EF3EB3F87CCA42040A /* Models */ = {
@@ -109,6 +133,7 @@
 			children = (
 				16FE64896AA16579D44D376A /* Resources */,
 				56ABF0F2BC7E3B1343CD0B7E /* Sources */,
+				35D3CE8533583D34D1520CBD /* Tests */,
 				F97D1B58CF455BD7F4283548 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -126,6 +151,7 @@
 			isa = PBXGroup;
 			children = (
 				10DC87F7BC39C0B12DF016AF /* MadCalc.app */,
+				67598298CD4358255FC01B1D /* MadCalcTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -133,6 +159,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		F9B6DE87054681FA670EB391 /* MadCalcTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 91BE292DA8E7A6E33E2A9E1C /* Build configuration list for PBXNativeTarget "MadCalcTests" */;
+			buildPhases = (
+				28D718B21FE4ABC27A6A34CF /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FD7BC2B63DAD947B0C14AABC /* PBXTargetDependency */,
+			);
+			name = MadCalcTests;
+			packageProductDependencies = (
+			);
+			productName = MadCalcTests;
+			productReference = 67598298CD4358255FC01B1D /* MadCalcTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		FB7D13E59A55B3C0142B6249 /* MadCalc */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8D10014A7325EA428302F54E /* Build configuration list for PBXNativeTarget "MadCalc" */;
@@ -158,9 +202,10 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					FB7D13E59A55B3C0142B6249 = {
+						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -180,6 +225,7 @@
 			projectRoot = "";
 			targets = (
 				FB7D13E59A55B3C0142B6249 /* MadCalc */,
+				F9B6DE87054681FA670EB391 /* MadCalcTests */,
 			);
 		};
 /* End PBXProject section */
@@ -196,6 +242,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		28D718B21FE4ABC27A6A34CF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E46954EA81400ADE4ACCF818 /* CutOptimizerTests.swift in Sources */,
+				67F6933DFC4CF0E86EA58D2F /* MeasurementUnitTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F86394CAE594A4720D12DF71 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -219,12 +274,19 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		FD7BC2B63DAD947B0C14AABC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FB7D13E59A55B3C0142B6249 /* MadCalc */;
+			targetProxy = 950DF3D8D42F6B8C6B0F0C28 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		2A58835835ACA4DD01DF212E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -255,12 +317,10 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = P3QLTD589L;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -282,17 +342,56 @@
 				INFOPLIST_KEY_UIRequiresFullScreen = NO;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 0.2.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = pl.madmagsystem.MadCalcNative;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.madmagsystem.madcalc.ios;
 				PRODUCT_NAME = MadCalc;
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		313F5A93854B46E9088C889F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = pl.madmagsystem.madcalc.ios.tests;
+				PRODUCT_MODULE_NAME = MadCalcTests;
+				PRODUCT_NAME = MadCalcTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MadCalc.app/MadCalc";
+			};
+			name = Release;
+		};
+		4966F5731D862E14E0F09C25 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = pl.madmagsystem.madcalc.ios.tests;
+				PRODUCT_MODULE_NAME = MadCalcTests;
+				PRODUCT_NAME = MadCalcTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MadCalc.app/MadCalc";
 			};
 			name = Debug;
 		};
@@ -300,7 +399,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -331,12 +429,10 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = P3QLTD589L;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -352,13 +448,12 @@
 				INFOPLIST_KEY_UIRequiresFullScreen = NO;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 0.2.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = pl.madmagsystem.MadCalcNative;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.madmagsystem.madcalc.ios;
 				PRODUCT_NAME = MadCalc;
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -371,6 +466,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -387,6 +483,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -414,6 +511,15 @@
 			buildConfigurations = (
 				CFBE474451422A5C3BBD1D0B /* Debug */,
 				D665D690EEC08E55E1EED7F3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		91BE292DA8E7A6E33E2A9E1C /* Build configuration list for PBXNativeTarget "MadCalcTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4966F5731D862E14E0F09C25 /* Debug */,
+				313F5A93854B46E9088C889F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

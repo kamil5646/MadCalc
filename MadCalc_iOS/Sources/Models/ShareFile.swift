@@ -1,6 +1,6 @@
 import Foundation
 
-struct ShareFile: Identifiable {
+struct ShareFile: Identifiable, Sendable {
     let id = UUID()
     let url: URL
 }

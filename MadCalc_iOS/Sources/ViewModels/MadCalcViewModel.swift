@@ -172,12 +172,13 @@ final class MadCalcViewModel: ObservableObject {
         let existingBarNames = Dictionary(
             uniqueKeysWithValues: (result?.bars ?? []).map { ($0.barIndex, $0.name) }
         )
+        let optimizer = self.optimizer
         isGenerating = true
 
         Task {
             do {
                 let optimized = try await Task.detached(priority: .userInitiated) {
-                    try self.optimizer.optimize(items: snapshotItems, settings: settings)
+                    try optimizer.optimize(items: snapshotItems, settings: settings)
                 }.value
 
                 let namedBars = optimized.bars.map { bar in

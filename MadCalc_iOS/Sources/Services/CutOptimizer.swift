@@ -1,12 +1,12 @@
 import Foundation
 
-struct CutOptimizationError: LocalizedError {
+struct CutOptimizationError: LocalizedError, Sendable {
     let message: String
 
     var errorDescription: String? { message }
 }
 
-struct CutOptimizer {
+struct CutOptimizer: Sendable {
     private let exactSearchNodeLimit = 250_000
 
     func optimize(items: [CutItem], settings: CutSettings) throws -> OptimizationResult {

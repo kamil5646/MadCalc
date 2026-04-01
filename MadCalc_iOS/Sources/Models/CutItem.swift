@@ -1,6 +1,6 @@
 import Foundation
 
-struct CutItem: Identifiable, Codable, Equatable {
+struct CutItem: Identifiable, Codable, Equatable, Sendable {
     var id: UUID
     var lengthMm: Int
     var quantity: Int

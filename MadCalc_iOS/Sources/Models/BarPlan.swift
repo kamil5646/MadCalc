@@ -1,6 +1,6 @@
 import Foundation
 
-struct BarPlan: Codable, Equatable, Identifiable {
+struct BarPlan: Codable, Equatable, Identifiable, Sendable {
     var barIndex: Int
     var name: String
     var cutsMm: [Int]
