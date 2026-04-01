@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   'Offline planner cięcia sztang na macOS, Windows i Android',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF5D655F),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -233,7 +233,10 @@ class _HomePageState extends State<HomePage> {
                         controller: controller,
                       ),
                       if (index < controller.items.length - 1)
-                        const Divider(height: 24, color: Color(0xFFE8E2D8)),
+                        Divider(
+                          height: 24,
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
                     ],
                   ],
                 ),
@@ -371,7 +374,7 @@ class _HomePageState extends State<HomePage> {
                 SelectableText(
                   'Ostatni eksport: ${controller.lastExportPath}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF5D655F),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -623,6 +626,8 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(22),
@@ -639,7 +644,7 @@ class _Panel extends StatelessWidget {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF5D655F),
+                color: colorScheme.onSurfaceVariant,
                 height: 1.35,
               ),
             ),
@@ -661,6 +666,7 @@ class _ItemRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -679,7 +685,7 @@ class _ItemRow extends StatelessWidget {
               Text(
                 '${item.quantity} szt. • razem ${controller.formatLength(item.totalLengthMm)}',
                 style: textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF5D655F),
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -708,12 +714,14 @@ class _MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       constraints: const BoxConstraints(minWidth: 150),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F5EF),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2DDD2)),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Column(
@@ -721,9 +729,9 @@ class _MetricTile extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5D655F)),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -746,11 +754,13 @@ class _BarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2DDD2)),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -792,7 +802,7 @@ class _BarCard extends StatelessWidget {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F5EF),
+                color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
               ),
               padding: const EdgeInsets.all(14),
@@ -806,9 +816,9 @@ class _BarCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'Łączna grubość piły: ${controller.formatLength(controller.totalSawThickness(bar))}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5D655F)),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -881,16 +891,18 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F5EF),
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          Icon(icon, size: 38, color: const Color(0xFF6A7D8E)),
+          Icon(icon, size: 38, color: colorScheme.onSurfaceVariant),
           const SizedBox(height: 12),
           Text(
             title,
@@ -903,7 +915,7 @@ class _EmptyState extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF5D655F),
+              color: colorScheme.onSurfaceVariant,
               height: 1.45,
             ),
           ),

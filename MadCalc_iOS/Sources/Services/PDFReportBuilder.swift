@@ -45,7 +45,7 @@ struct PDFReportBuilder {
     format.documentInfo = [
       kCGPDFContextCreator as String: "MadCalc",
       kCGPDFContextAuthor as String: "MadCalc",
-      kCGPDFContextTitle as String: "Plan cięcia",
+      kCGPDFContextTitle as String: "Raport optymalizacji cięcia",
     ]
 
     let renderer = UIGraphicsPDFRenderer(bounds: PDFLayout.pageRect, format: format)
@@ -54,8 +54,54 @@ struct PDFReportBuilder {
       render.beginPage()
 
       render.drawTitle("MadCalc")
-      render.drawSubtitle("Plan cięcia")
+      render.drawSubtitle("Raport optymalizacji cięcia")
       render.drawNote("Wygenerowano \(Self.longDateFormatter.string(from: generatedAt))")
+
+      let totalItemCount = items.reduce(0) { $0 + $1.quantity }
+      let summaryRows = [
+        ["Liczba pozycji", "\(items.count)"],
+        ["Łączna liczba elementów", "\(totalItemCount)"],
+        ["Liczba sztang", "\(result.barCount)"],
+        ["Łączny odpad", unit.format(result.totalWasteMm)],
+        ["Wykorzystanie", "\(formatPercent(result.utilizationPercent))%"],
+      ]
+      render.drawTable(
+        title: "Podsumowanie",
+        headers: ["Pole", "Wartość"],
+        rows: summaryRows,
+        columnFractions: [0.62, 0.38],
+        accent: PDFTheme.brandBlue,
+        alignments: [.left, .right]
+      )
+
+      let settingsRows = [
+        ["Długość sztangi", unit.format(settings.stockLengthMm)],
+        ["Grubość piły", unit.format(settings.sawThicknessMm)],
+      ]
+      render.drawTable(
+        title: "Parametry cięcia",
+        headers: ["Parametr", "Wartość"],
+        rows: settingsRows,
+        columnFractions: [0.62, 0.38],
+        accent: PDFTheme.brandBlue,
+        alignments: [.left, .right]
+      )
+
+      let itemRows = items.map { item in
+        [
+          unit.format(item.lengthMm),
+          "\(item.quantity)",
+          unit.format(item.totalLengthMm),
+        ]
+      }
+      render.drawTable(
+        title: "Lista elementów",
+        headers: ["Długość", "Ilość", "Razem"],
+        rows: itemRows,
+        columnFractions: [0.36, 0.20, 0.44],
+        accent: PDFTheme.brandBlue,
+        alignments: [.left, .center, .right]
+      )
 
       var barRows: [[String]] = []
       for bar in result.bars {
@@ -128,6 +174,10 @@ struct PDFReportBuilder {
       lines.append(currentLine)
     }
     return lines
+  }
+
+  private func formatPercent(_ value: Double) -> String {
+    String(format: "%.1f", value).replacingOccurrences(of: ".", with: ",")
   }
 
   private static let fileDateFormatter: DateFormatter = {

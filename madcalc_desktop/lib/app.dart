@@ -4,59 +4,80 @@ import 'controllers/madcalc_controller.dart';
 import 'ui/home_page.dart';
 
 class MadCalcApp extends StatelessWidget {
-  const MadCalcApp({
-    required this.controller,
-    super.key,
-  });
+  const MadCalcApp({required this.controller, super.key});
 
   final MadCalcController controller;
 
   @override
   Widget build(BuildContext context) {
     const primary = Color(0xFF1F5C99);
-    const background = Color(0xFFF3F0EA);
-    const surface = Color(0xFFFCFBF8);
+    const lightBackground = Color(0xFFF3F0EA);
+    const lightSurface = Color(0xFFFCFBF8);
+    const darkBackground = Color(0xFF0F141B);
+    const darkSurface = Color(0xFF18212C);
 
-    final baseTheme = ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
+    ThemeData buildTheme({
+      required Brightness brightness,
+      required Color background,
+      required Color surface,
+    }) {
+      final colorScheme = ColorScheme.fromSeed(
         seedColor: primary,
-        brightness: Brightness.light,
+        brightness: brightness,
         primary: primary,
         surface: surface,
-      ),
-      scaffoldBackgroundColor: background,
-      fontFamily: 'SF Pro Display',
-    );
+      );
 
-    return MaterialApp(
-      title: 'MadCalc',
-      debugShowCheckedModeBanner: false,
-      theme: baseTheme.copyWith(
+      final baseTheme = ThemeData(
+        useMaterial3: true,
+        colorScheme: colorScheme,
+        scaffoldBackgroundColor: background,
+        fontFamily: 'SF Pro Display',
+      );
+
+      return baseTheme.copyWith(
         cardTheme: baseTheme.cardTheme.copyWith(
           color: surface,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: Color(0xFFE1DDD4)),
+            side: BorderSide(color: colorScheme.outlineVariant),
           ),
         ),
-        inputDecorationTheme: const InputDecorationTheme(
+        inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white,
+          fillColor: brightness == Brightness.dark
+              ? colorScheme.surfaceContainerHighest
+              : Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-            borderSide: BorderSide(color: Color(0xFFD9D6CE)),
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            borderSide: BorderSide(color: colorScheme.outlineVariant),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-            borderSide: BorderSide(color: Color(0xFFD9D6CE)),
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            borderSide: BorderSide(color: colorScheme.outlineVariant),
           ),
-          focusedBorder: OutlineInputBorder(
+          focusedBorder: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(16)),
             borderSide: BorderSide(color: primary, width: 1.6),
           ),
         ),
+      );
+    }
+
+    return MaterialApp(
+      title: 'MadCalc',
+      debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system,
+      theme: buildTheme(
+        brightness: Brightness.light,
+        background: lightBackground,
+        surface: lightSurface,
+      ),
+      darkTheme: buildTheme(
+        brightness: Brightness.dark,
+        background: darkBackground,
+        surface: darkSurface,
       ),
       home: HomePage(controller: controller),
     );

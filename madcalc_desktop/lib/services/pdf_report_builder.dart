@@ -27,7 +27,7 @@ class PdfReportBuilder {
       title: 'MadCalc',
       author: 'MadCalc',
       creator: 'MadCalc',
-      subject: 'Plan cięcia',
+      subject: 'Raport optymalizacji cięcia',
       theme: theme,
     );
 
@@ -48,7 +48,7 @@ class PdfReportBuilder {
             ),
             pw.SizedBox(height: 4),
             pw.Text(
-              'Plan cięcia',
+              'Raport optymalizacji cięcia',
               style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 2),
@@ -60,6 +60,45 @@ class PdfReportBuilder {
               ),
             ),
             pw.SizedBox(height: 14),
+            ..._buildTableSections(
+              title: 'Podsumowanie',
+              headers: const ['Pole', 'Wartość'],
+              rows: _buildSummaryRows(
+                items: items,
+                settings: settings,
+                result: result,
+                unit: unit,
+              ),
+              columnFlex: const [3, 2],
+              alignments: const [
+                pw.Alignment.centerLeft,
+                pw.Alignment.centerRight,
+              ],
+              rowsPerChunk: 12,
+            ),
+            ..._buildTableSections(
+              title: 'Parametry cięcia',
+              headers: const ['Parametr', 'Wartość'],
+              rows: _buildSettingsRows(settings: settings, unit: unit),
+              columnFlex: const [3, 2],
+              alignments: const [
+                pw.Alignment.centerLeft,
+                pw.Alignment.centerRight,
+              ],
+              rowsPerChunk: 8,
+            ),
+            ..._buildTableSections(
+              title: 'Lista elementów',
+              headers: const ['Długość', 'Ilość', 'Razem'],
+              rows: _buildItemRows(items: items, unit: unit),
+              columnFlex: const [2, 1, 2],
+              alignments: const [
+                pw.Alignment.centerLeft,
+                pw.Alignment.center,
+                pw.Alignment.centerRight,
+              ],
+              rowsPerChunk: 18,
+            ),
             ..._buildTableSections(
               title: 'Plan cięcia',
               headers: const ['Nazwa', 'Cięcia', 'Elem.', 'Użycie', 'Odpad'],
@@ -94,6 +133,52 @@ class PdfReportBuilder {
       base: pw.Font.ttf(regularFontBytes.buffer.asByteData()),
       bold: pw.Font.ttf(boldFontBytes.buffer.asByteData()),
     );
+  }
+
+  List<List<String>> _buildSummaryRows({
+    required List<CutItem> items,
+    required CutSettings settings,
+    required OptimizationResult result,
+    required MeasurementUnit unit,
+  }) {
+    final totalItemCount = items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
+    return [
+      ['Liczba pozycji', '${items.length}'],
+      ['Łączna liczba elementów', '$totalItemCount'],
+      ['Liczba sztang', '${result.barCount}'],
+      ['Łączny odpad', unit.format(result.totalWasteMm)],
+      ['Wykorzystanie', '${_formatPercent(result.utilizationPercent)}%'],
+      ['Długość sztangi', unit.format(settings.stockLengthMm)],
+      ['Grubość piły', unit.format(settings.sawThicknessMm)],
+    ];
+  }
+
+  List<List<String>> _buildSettingsRows({
+    required CutSettings settings,
+    required MeasurementUnit unit,
+  }) {
+    return [
+      ['Długość sztangi', unit.format(settings.stockLengthMm)],
+      ['Grubość piły', unit.format(settings.sawThicknessMm)],
+    ];
+  }
+
+  List<List<String>> _buildItemRows({
+    required List<CutItem> items,
+    required MeasurementUnit unit,
+  }) {
+    return items
+        .map(
+          (item) => [
+            unit.format(item.lengthMm),
+            '${item.quantity}',
+            unit.format(item.totalLengthMm),
+          ],
+        )
+        .toList();
   }
 
   List<List<String>> _buildBarRows({
@@ -252,6 +337,10 @@ class PdfReportBuilder {
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
     return '$day.$month.$year, $hour:$minute';
+  }
+
+  String _formatPercent(double value) {
+    return value.toStringAsFixed(1).replaceAll('.', ',');
   }
 }
 
