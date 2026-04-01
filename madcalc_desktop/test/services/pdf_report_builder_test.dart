@@ -7,9 +7,12 @@ import 'package:madcalc_desktop/models/optimization_result.dart';
 import 'package:madcalc_desktop/services/pdf_report_builder.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('PdfReportBuilder', () {
     test('builds a long report without hitting a low page cap', () async {
       final builder = PdfReportBuilder();
+      final fonts = await PdfFontAssets.load();
 
       final result = OptimizationResult(
         barCount: 260,
@@ -39,6 +42,8 @@ void main() {
         result: result,
         unit: MeasurementUnit.centimeters,
         generatedAt: DateTime(2026, 4, 1, 12, 0),
+        regularFontBytes: fonts.regularBytes,
+        boldFontBytes: fonts.boldBytes,
       );
 
       expect(data.length, greaterThan(1024));

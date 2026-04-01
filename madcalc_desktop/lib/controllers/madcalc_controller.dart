@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
+import 'package:printing/printing.dart';
 
 import '../models/bar_plan.dart';
 import '../models/cut_item.dart';
@@ -36,6 +37,7 @@ class MadCalcController extends ChangeNotifier {
   DateTime? generatedAt;
   bool isGenerating = false;
   bool isExporting = false;
+  bool isPrinting = false;
   String? lastExportPath;
 
   String? _editingItemId;
@@ -63,7 +65,17 @@ class MadCalcController extends ChangeNotifier {
         generatedSettings != null &&
         generatedAt != null &&
         !isGenerating &&
-        !isExporting;
+        !isExporting &&
+        !isPrinting;
+  }
+
+  bool get canPrint {
+    return result != null &&
+        generatedSettings != null &&
+        generatedAt != null &&
+        !isGenerating &&
+        !isExporting &&
+        !isPrinting;
   }
 
   Future<void> _loadState() async {
@@ -277,18 +289,13 @@ class MadCalcController extends ChangeNotifier {
   }
 
   Future<String?> exportPdf() async {
-    final currentResult = result;
-    final currentSettings = generatedSettings;
-    final currentGeneratedAt = generatedAt;
-
-    if (currentResult == null ||
-        currentSettings == null ||
-        currentGeneratedAt == null) {
+    final snapshot = _pdfSnapshot();
+    if (snapshot == null) {
       return 'Najpierw wygeneruj plan cięcia.';
     }
 
     final location = await getSaveLocation(
-      suggestedName: _suggestedPdfFileName(currentGeneratedAt),
+      suggestedName: _suggestedPdfFileName(snapshot.generatedAt),
       acceptedTypeGroups: const <XTypeGroup>[
         XTypeGroup(label: 'PDF', extensions: <String>['pdf']),
       ],
@@ -302,16 +309,7 @@ class MadCalcController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await compute<Map<String, dynamic>, Uint8List>(
-        buildPdfInBackground,
-        <String, dynamic>{
-          'items': items.map((item) => item.toJson()).toList(),
-          'settings': currentSettings.toJson(),
-          'result': currentResult.toJson(),
-          'unit': unit.name,
-          'generatedAt': currentGeneratedAt.toIso8601String(),
-        },
-      ).timeout(_pdfExportTimeout(currentResult));
+      final data = await _buildPdfData(snapshot);
       final path = location.path.toLowerCase().endsWith('.pdf')
           ? location.path
           : '${location.path}.pdf';
@@ -325,6 +323,32 @@ class MadCalcController extends ChangeNotifier {
       return 'Nie udało się zapisać raportu PDF.';
     } finally {
       isExporting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> printPdf() async {
+    final snapshot = _pdfSnapshot();
+    if (snapshot == null) {
+      return 'Najpierw wygeneruj plan cięcia.';
+    }
+
+    isPrinting = true;
+    notifyListeners();
+
+    try {
+      final data = await _buildPdfData(snapshot);
+      await Printing.layoutPdf(
+        name: _suggestedPdfFileName(snapshot.generatedAt),
+        onLayout: (_) async => data,
+      );
+      return 'Otwarto okno drukowania.';
+    } on TimeoutException {
+      return 'Przygotowanie PDF do druku trwało wyjątkowo długo. Spróbuj jeszcze raz dla aktualnego planu.';
+    } catch (_) {
+      return 'Nie udało się otworzyć okna drukowania.';
+    } finally {
+      isPrinting = false;
       notifyListeners();
     }
   }
@@ -446,6 +470,42 @@ class MadCalcController extends ChangeNotifier {
     return to.format(valueMm, includeUnit: false);
   }
 
+  _PdfSnapshot? _pdfSnapshot() {
+    final currentResult = result;
+    final currentSettings = generatedSettings;
+    final currentGeneratedAt = generatedAt;
+
+    if (currentResult == null ||
+        currentSettings == null ||
+        currentGeneratedAt == null) {
+      return null;
+    }
+
+    return _PdfSnapshot(
+      items: List<CutItem>.from(items),
+      settings: currentSettings,
+      result: currentResult,
+      unit: unit,
+      generatedAt: currentGeneratedAt,
+    );
+  }
+
+  Future<Uint8List> _buildPdfData(_PdfSnapshot snapshot) async {
+    final fonts = await PdfFontAssets.load();
+    return compute<Map<String, dynamic>, Uint8List>(
+      buildPdfInBackground,
+      <String, dynamic>{
+        'items': snapshot.items.map((item) => item.toJson()).toList(),
+        'settings': snapshot.settings.toJson(),
+        'result': snapshot.result.toJson(),
+        'unit': snapshot.unit.name,
+        'generatedAt': snapshot.generatedAt.toIso8601String(),
+        'regularFontBytes': fonts.regularBytes,
+        'boldFontBytes': fonts.boldBytes,
+      },
+    ).timeout(_pdfExportTimeout(snapshot.result));
+  }
+
   String _suggestedPdfFileName(DateTime dateTime) {
     final year = dateTime.year.toString();
     final month = dateTime.month.toString().padLeft(2, '0');
@@ -460,4 +520,20 @@ class MadCalcController extends ChangeNotifier {
   }
 
   int _idSeed = 0;
+}
+
+class _PdfSnapshot {
+  const _PdfSnapshot({
+    required this.items,
+    required this.settings,
+    required this.result,
+    required this.unit,
+    required this.generatedAt,
+  });
+
+  final List<CutItem> items;
+  final CutSettings settings;
+  final OptimizationResult result;
+  final MeasurementUnit unit;
+  final DateTime generatedAt;
 }

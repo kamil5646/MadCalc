@@ -19,6 +19,8 @@ class _HomePageState extends State<HomePage> {
   late final TextEditingController _itemQuantityController;
   late final TextEditingController _stockLengthController;
   late final TextEditingController _sawThicknessController;
+  late final FocusNode _itemLengthFocusNode;
+  late final FocusNode _itemQuantityFocusNode;
 
   @override
   void initState() {
@@ -35,6 +37,8 @@ class _HomePageState extends State<HomePage> {
     _sawThicknessController = TextEditingController(
       text: widget.controller.sawThicknessInput,
     );
+    _itemLengthFocusNode = FocusNode();
+    _itemQuantityFocusNode = FocusNode();
   }
 
   @override
@@ -43,6 +47,8 @@ class _HomePageState extends State<HomePage> {
     _itemQuantityController.dispose();
     _stockLengthController.dispose();
     _sawThicknessController.dispose();
+    _itemLengthFocusNode.dispose();
+    _itemQuantityFocusNode.dispose();
     super.dispose();
   }
 
@@ -148,25 +154,33 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Expanded(
                     child: TextField(
+                      focusNode: _itemLengthFocusNode,
                       controller: _itemLengthController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Długość (${controller.unit.label})',
                       ),
                       onChanged: controller.updateItemLengthInput,
+                      onSubmitted: (_) {
+                        _itemQuantityFocusNode.requestFocus();
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
+                      focusNode: _itemQuantityFocusNode,
                       controller: _itemQuantityController,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
                       decoration: const InputDecoration(
                         labelText: 'Ilość szt.',
                       ),
                       onChanged: controller.updateItemQuantityInput,
+                      onSubmitted: (_) => _handleSaveItem(),
                     ),
                   ),
                 ],
@@ -337,6 +351,19 @@ class _HomePageState extends State<HomePage> {
                       controller.isExporting ? 'Tworzę PDF...' : 'Zapisz PDF',
                     ),
                   ),
+                  OutlinedButton.icon(
+                    onPressed: controller.canPrint ? _handlePrint : null,
+                    icon: controller.isPrinting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.print_rounded),
+                    label: Text(
+                      controller.isPrinting ? 'Otwieram druk...' : 'Drukuj',
+                    ),
+                  ),
                 ],
               ),
               if (controller.lastExportPath != null) ...[
@@ -431,7 +458,10 @@ class _HomePageState extends State<HomePage> {
     final message = widget.controller.saveCurrentItem();
     if (message != null) {
       _showMessage(message, isError: true);
+      return;
     }
+
+    _itemLengthFocusNode.requestFocus();
   }
 
   Future<void> _handleGenerate() async {
@@ -444,6 +474,14 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _handleExport() async {
     final message = await widget.controller.exportPdf();
+    if (!mounted || message == null) {
+      return;
+    }
+    _showMessage(message);
+  }
+
+  Future<void> _handlePrint() async {
+    final message = await widget.controller.printPdf();
     if (!mounted || message == null) {
       return;
     }

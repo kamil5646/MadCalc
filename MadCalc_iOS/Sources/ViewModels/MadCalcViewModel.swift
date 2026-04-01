@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 @MainActor
 final class MadCalcViewModel: ObservableObject {
@@ -14,6 +15,7 @@ final class MadCalcViewModel: ObservableObject {
   @Published private(set) var generatedAt: Date?
   @Published private(set) var isGenerating = false
   @Published private(set) var isExporting = false
+  @Published private(set) var isPrinting = false
   @Published var alertState: AlertState?
   @Published var shareFile: ShareFile?
 
@@ -56,6 +58,12 @@ final class MadCalcViewModel: ObservableObject {
 
   var canExport: Bool {
     result != nil && generatedSettings != nil && generatedAt != nil && !isGenerating && !isExporting
+      && !isPrinting
+  }
+
+  var canPrint: Bool {
+    result != nil && generatedSettings != nil && generatedAt != nil && !isGenerating && !isExporting
+      && !isPrinting
   }
 
   func bindingForUnit() -> Binding<MeasurementUnit> {
@@ -228,7 +236,7 @@ final class MadCalcViewModel: ObservableObject {
 
       do {
         await Task.yield()
-        let url = try PDFReportBuilder().makeTemporaryReportURL(
+        let url = try makeReportURL(
           items: snapshotItems,
           settings: generatedSettings,
           result: result,
@@ -241,6 +249,46 @@ final class MadCalcViewModel: ObservableObject {
         presentError(
           error.localizedDescription.isEmpty
             ? "Nie udało się przygotować PDF." : error.localizedDescription)
+      }
+    }
+  }
+
+  func printPDF() {
+    guard let result, let generatedSettings, let generatedAt else {
+      presentError("Najpierw wygeneruj plan cięcia.")
+      return
+    }
+    guard !isPrinting else {
+      return
+    }
+
+    let snapshotItems = items
+    let snapshotUnit = unit
+    isPrinting = true
+
+    Task {
+      defer {
+        isPrinting = false
+      }
+
+      do {
+        await Task.yield()
+        let url = try makeReportURL(
+          items: snapshotItems,
+          settings: generatedSettings,
+          result: result,
+          unit: snapshotUnit,
+          generatedAt: generatedAt
+        )
+
+        try await PDFPrintPresenter.presentPDF(
+          at: url,
+          jobName: url.deletingPathExtension().lastPathComponent
+        )
+      } catch {
+        presentError(
+          error.localizedDescription.isEmpty
+            ? "Nie udało się otworzyć okna drukowania." : error.localizedDescription)
       }
     }
   }
@@ -264,6 +312,22 @@ final class MadCalcViewModel: ObservableObject {
 
   func displayName(for bar: BarPlan) -> String {
     result?.bars.first(where: { $0.id == bar.id })?.displayName ?? bar.displayName
+  }
+
+  private func makeReportURL(
+    items: [CutItem],
+    settings: CutSettings,
+    result: OptimizationResult,
+    unit: MeasurementUnit,
+    generatedAt: Date
+  ) throws -> URL {
+    try PDFReportBuilder().makeTemporaryReportURL(
+      items: items,
+      settings: settings,
+      result: result,
+      unit: unit,
+      generatedAt: generatedAt
+    )
   }
 
   private func convertDisplayedValue(
@@ -326,5 +390,44 @@ final class MadCalcViewModel: ObservableObject {
 
   private func presentError(_ message: String) {
     alertState = AlertState(title: "MadCalc", message: message)
+  }
+}
+
+private enum PDFPrintPresenter {
+  @MainActor
+  static func presentPDF(at url: URL, jobName: String) async throws {
+    guard UIPrintInteractionController.isPrintingAvailable else {
+      throw PrintPresenterError.printingUnavailable
+    }
+
+    let controller = UIPrintInteractionController.shared
+    let printInfo = UIPrintInfo(dictionary: nil)
+    printInfo.jobName = jobName
+    printInfo.outputType = .general
+    controller.printInfo = printInfo
+    controller.showsNumberOfCopies = true
+    controller.printingItem = url
+
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+      controller.present(animated: true) { _, _, error in
+        if let error {
+          continuation.resume(throwing: error)
+          return
+        }
+
+        continuation.resume(returning: ())
+      }
+    }
+  }
+}
+
+private enum PrintPresenterError: LocalizedError {
+  case printingUnavailable
+
+  var errorDescription: String? {
+    switch self {
+    case .printingUnavailable:
+      return "Drukowanie nie jest dostępne na tym urządzeniu."
+    }
   }
 }

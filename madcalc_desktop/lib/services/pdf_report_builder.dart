@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -17,21 +16,19 @@ class PdfReportBuilder {
     required OptimizationResult result,
     required MeasurementUnit unit,
     required DateTime generatedAt,
+    Uint8List? regularFontBytes,
+    Uint8List? boldFontBytes,
   }) async {
+    final theme = _buildTheme(
+      regularFontBytes: regularFontBytes,
+      boldFontBytes: boldFontBytes,
+    );
     final document = pw.Document(
       title: 'MadCalc',
       author: 'MadCalc',
       creator: 'MadCalc',
-      subject: 'Raport optymalizacji cięcia',
-    );
-
-    final totalItemCount = items.fold<int>(
-      0,
-      (sum, item) => sum + item.quantity,
-    );
-    final totalItemsLength = items.fold<int>(
-      0,
-      (sum, item) => sum + item.totalLengthMm,
+      subject: 'Plan cięcia',
+      theme: theme,
     );
 
     document.addPage(
@@ -40,9 +37,6 @@ class PdfReportBuilder {
         maxPages: _maxPdfPages,
         margin: const pw.EdgeInsets.fromLTRB(24, 28, 24, 24),
         build: (context) {
-          final sortedItems = [...items]
-            ..sort((left, right) => right.lengthMm.compareTo(left.lengthMm));
-
           return [
             pw.Text(
               'MadCalc',
@@ -54,7 +48,7 @@ class PdfReportBuilder {
             ),
             pw.SizedBox(height: 4),
             pw.Text(
-              'Raport optymalizacji cięcia sztang',
+              'Plan cięcia',
               style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 2),
@@ -66,52 +60,6 @@ class PdfReportBuilder {
               ),
             ),
             pw.SizedBox(height: 14),
-            ..._buildTableSections(
-              title: 'Podsumowanie',
-              headers: const ['Zakres', 'Wartość'],
-              rows: [
-                [
-                  'Wejście',
-                  'Pozycje: ${items.length} | Elementy: $totalItemCount | Łączna długość: ${unit.format(totalItemsLength)}',
-                ],
-                [
-                  'Ustawienia',
-                  'Sztanga: ${unit.format(settings.stockLengthMm)} | Grubość piły: ${unit.format(settings.sawThicknessMm)} | Jednostka: ${unit.label}',
-                ],
-                [
-                  'Wynik',
-                  'Liczba sztang: ${result.barCount} | Odpad: ${unit.format(result.totalWasteMm)} | Wykorzystanie: ${_formatPercent(result.utilizationPercent)}%',
-                ],
-              ],
-              columnFlex: const [2, 8],
-              alignments: const [
-                pw.Alignment.centerLeft,
-                pw.Alignment.centerLeft,
-              ],
-              rowsPerChunk: 12,
-            ),
-            pw.SizedBox(height: 12),
-            ..._buildTableSections(
-              title: 'Lista elementów',
-              headers: const ['Długość', 'Ilość', 'Razem'],
-              rows: sortedItems
-                  .map(
-                    (item) => [
-                      unit.format(item.lengthMm),
-                      '${item.quantity}',
-                      unit.format(item.totalLengthMm),
-                    ],
-                  )
-                  .toList(),
-              columnFlex: const [3, 2, 3],
-              alignments: const [
-                pw.Alignment.centerRight,
-                pw.Alignment.center,
-                pw.Alignment.centerRight,
-              ],
-              rowsPerChunk: 28,
-            ),
-            pw.SizedBox(height: 12),
             ..._buildTableSections(
               title: 'Plan cięcia',
               headers: const ['Nazwa', 'Cięcia', 'Elem.', 'Użycie', 'Odpad'],
@@ -132,6 +80,20 @@ class PdfReportBuilder {
     );
 
     return document.save();
+  }
+
+  pw.ThemeData? _buildTheme({
+    Uint8List? regularFontBytes,
+    Uint8List? boldFontBytes,
+  }) {
+    if (regularFontBytes == null || boldFontBytes == null) {
+      return null;
+    }
+
+    return pw.ThemeData.withFont(
+      base: pw.Font.ttf(regularFontBytes.buffer.asByteData()),
+      bold: pw.Font.ttf(boldFontBytes.buffer.asByteData()),
+    );
   }
 
   List<List<String>> _buildBarRows({
@@ -291,10 +253,6 @@ class PdfReportBuilder {
     final minute = dateTime.minute.toString().padLeft(2, '0');
     return '$day.$month.$year, $hour:$minute';
   }
-
-  String _formatPercent(double value) {
-    return value.toStringAsFixed(1).replaceAll('.', ',');
-  }
 }
 
 Future<Uint8List> buildPdfInBackground(Map<String, dynamic> payload) {
@@ -309,6 +267,8 @@ Future<Uint8List> buildPdfInBackground(Map<String, dynamic> payload) {
   );
   final unit = MeasurementUnit.fromRaw(payload['unit'] as String);
   final generatedAt = DateTime.parse(payload['generatedAt'] as String);
+  final regularFontBytes = payload['regularFontBytes'] as Uint8List?;
+  final boldFontBytes = payload['boldFontBytes'] as Uint8List?;
 
   return PdfReportBuilder().build(
     items: items,
@@ -316,5 +276,28 @@ Future<Uint8List> buildPdfInBackground(Map<String, dynamic> payload) {
     result: result,
     unit: unit,
     generatedAt: generatedAt,
+    regularFontBytes: regularFontBytes,
+    boldFontBytes: boldFontBytes,
   );
+}
+
+final class PdfFontAssets {
+  static const String regularPath = 'assets/pdf_fonts/Roboto-Regular.ttf';
+  static const String boldPath = 'assets/pdf_fonts/Roboto-Bold.ttf';
+
+  static Future<PdfFontBundle> load() async {
+    final regular = await rootBundle.load(regularPath);
+    final bold = await rootBundle.load(boldPath);
+    return PdfFontBundle(
+      regularBytes: regular.buffer.asUint8List(),
+      boldBytes: bold.buffer.asUint8List(),
+    );
+  }
+}
+
+final class PdfFontBundle {
+  const PdfFontBundle({required this.regularBytes, required this.boldBytes});
+
+  final Uint8List regularBytes;
+  final Uint8List boldBytes;
 }

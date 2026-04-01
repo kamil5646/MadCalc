@@ -1,7 +1,13 @@
 import SwiftUI
 
 struct ContentView: View {
+  private enum InputField: Hashable {
+    case itemLength
+    case itemQuantity
+  }
+
   @Environment(\.colorScheme) private var colorScheme
+  @FocusState private var focusedField: InputField?
   @ObservedObject var viewModel: MadCalcViewModel
 
   private var brandBlue: Color { Color(red: 0.13, green: 0.39, blue: 0.74) }
@@ -84,13 +90,39 @@ struct ContentView: View {
     sectionCard(title: "Elementy do cięcia", subtitle: viewModel.itemHint) {
       VStack(spacing: 14) {
         HStack(spacing: 12) {
-          decimalField("Długość [\(viewModel.unit.label)]", text: $viewModel.itemLengthInput)
-          integerField("Ilość szt.", text: $viewModel.itemQuantityInput)
+          VStack(alignment: .leading, spacing: 6) {
+            Text("Długość [\(viewModel.unit.label)]")
+              .font(.caption.weight(.semibold))
+              .foregroundStyle(.secondary)
+            TextField("Długość [\(viewModel.unit.label)]", text: $viewModel.itemLengthInput)
+              .keyboardType(.decimalPad)
+              .textFieldStyle(.roundedBorder)
+              .submitLabel(.next)
+              .focused($focusedField, equals: .itemLength)
+              .onSubmit {
+                focusedField = .itemQuantity
+              }
+          }
+
+          VStack(alignment: .leading, spacing: 6) {
+            Text("Ilość szt.")
+              .font(.caption.weight(.semibold))
+              .foregroundStyle(.secondary)
+            TextField("Ilość szt.", text: $viewModel.itemQuantityInput)
+              .keyboardType(.numberPad)
+              .textFieldStyle(.roundedBorder)
+              .submitLabel(.done)
+              .focused($focusedField, equals: .itemQuantity)
+              .onSubmit {
+                saveItemFromKeyboard()
+              }
+          }
+          .frame(maxWidth: 150)
         }
 
         HStack(spacing: 10) {
           Button(viewModel.itemActionTitle) {
-            viewModel.saveCurrentItem()
+            saveItemFromKeyboard()
           }
           .buttonStyle(.borderedProminent)
           .buttonBorderShape(.capsule)
@@ -123,6 +155,25 @@ struct ContentView: View {
         }
       }
     }
+    .toolbar {
+      ToolbarItemGroup(placement: .keyboard) {
+        if focusedField == .itemQuantity {
+          Button("Dodaj") {
+            saveItemFromKeyboard()
+          }
+        } else if focusedField == .itemLength {
+          Button("Dalej") {
+            focusedField = .itemQuantity
+          }
+        }
+
+        Spacer()
+
+        Button("Zamknij") {
+          focusedField = nil
+        }
+      }
+    }
   }
 
   private var settingsSection: some View {
@@ -151,41 +202,25 @@ struct ContentView: View {
             }
         }
 
-        HStack(spacing: 10) {
-          Button {
-            viewModel.generatePlan()
-          } label: {
-            if viewModel.isGenerating {
-              ProgressView()
-                .controlSize(.small)
-                .tint(.white)
-            } else {
-              Text("Generuj plan")
+        ViewThatFits(in: .horizontal) {
+          HStack(spacing: 10) {
+            generatePlanButton
+            exportPDFButton
+            printPDFButton
+            clearButton
+          }
+
+          VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+              generatePlanButton
+              exportPDFButton
+            }
+
+            HStack(spacing: 10) {
+              printPDFButton
+              clearButton
             }
           }
-          .buttonStyle(.borderedProminent)
-          .buttonBorderShape(.capsule)
-          .disabled(!viewModel.canGenerate)
-
-          Button {
-            viewModel.exportPDF()
-          } label: {
-            if viewModel.isExporting {
-              ProgressView()
-                .controlSize(.small)
-            } else {
-              Text("Eksportuj PDF")
-            }
-          }
-          .buttonStyle(.bordered)
-          .buttonBorderShape(.capsule)
-          .disabled(!viewModel.canExport)
-
-          Button("Wyczyść") {
-            viewModel.clearAll()
-          }
-          .buttonStyle(.bordered)
-          .buttonBorderShape(.capsule)
         }
       }
     }
@@ -412,5 +447,67 @@ struct ContentView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(12)
     .background(cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+  }
+
+  private func saveItemFromKeyboard() {
+    viewModel.saveCurrentItem()
+    focusedField = .itemLength
+  }
+
+  private var generatePlanButton: some View {
+    Button {
+      viewModel.generatePlan()
+    } label: {
+      if viewModel.isGenerating {
+        ProgressView()
+          .controlSize(.small)
+          .tint(.white)
+      } else {
+        Text("Generuj plan")
+      }
+    }
+    .buttonStyle(.borderedProminent)
+    .buttonBorderShape(.capsule)
+    .disabled(!viewModel.canGenerate)
+  }
+
+  private var exportPDFButton: some View {
+    Button {
+      viewModel.exportPDF()
+    } label: {
+      if viewModel.isExporting {
+        ProgressView()
+          .controlSize(.small)
+      } else {
+        Text("Eksportuj PDF")
+      }
+    }
+    .buttonStyle(.bordered)
+    .buttonBorderShape(.capsule)
+    .disabled(!viewModel.canExport)
+  }
+
+  private var printPDFButton: some View {
+    Button {
+      viewModel.printPDF()
+    } label: {
+      if viewModel.isPrinting {
+        ProgressView()
+          .controlSize(.small)
+      } else {
+        Text("Drukuj")
+      }
+    }
+    .buttonStyle(.bordered)
+    .buttonBorderShape(.capsule)
+    .disabled(!viewModel.canPrint)
+  }
+
+  private var clearButton: some View {
+    Button("Wyczyść") {
+      viewModel.clearAll()
+    }
+    .buttonStyle(.bordered)
+    .buttonBorderShape(.capsule)
   }
 }
