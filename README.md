@@ -55,6 +55,8 @@ cd madcalc_desktop
 flutter build windows
 ```
 
+Repo ma też workflow GitHub Actions, który potrafi zbudować paczkę Windows i dołączyć ją do GitHub Release.
+
 ### Ostatnio zweryfikowane buildy
 
 - `madcalc_desktop/build/macos/Build/Products/Release/MadCalc.app`

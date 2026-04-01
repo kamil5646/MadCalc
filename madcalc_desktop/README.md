@@ -47,6 +47,8 @@ flutter build macos
 flutter build windows
 ```
 
+Możesz też użyć workflow GitHub Actions z repo, żeby zbudować Windows asset i dołączyć go do release bez lokalnej maszyny z Windowsem.
+
 ### Android
 
 ```bash

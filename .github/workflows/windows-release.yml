@@ -1,0 +1,80 @@
+name: Windows Release Build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to upload the Windows asset to, for example v0.2.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.2
+          cache: true
+
+      - name: Install dependencies
+        working-directory: madcalc_desktop
+        run: flutter pub get
+
+      - name: Run tests
+        working-directory: madcalc_desktop
+        run: flutter test
+
+      - name: Build Windows bundle
+        working-directory: madcalc_desktop
+        run: flutter build windows
+
+      - name: Package Windows bundle
+        shell: pwsh
+        env:
+          RELEASE_TAG_FROM_EVENT: ${{ github.event.release.tag_name }}
+          RELEASE_TAG_FROM_INPUT: ${{ github.event.inputs.release_tag }}
+        run: |
+          $tag = $env:RELEASE_TAG_FROM_EVENT
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $tag = $env:RELEASE_TAG_FROM_INPUT
+          }
+
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            throw "Release tag is required."
+          }
+
+          $source = Join-Path $PWD "madcalc_desktop/build/windows/x64/runner/Release"
+          $staging = Join-Path $env:RUNNER_TEMP "MadCalc-windows-$tag"
+          $zipPath = Join-Path $PWD "MadCalc-windows-$tag.zip"
+
+          if (Test-Path $staging) {
+            Remove-Item $staging -Recurse -Force
+          }
+
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+
+          New-Item -ItemType Directory -Path $staging | Out-Null
+          Copy-Item "$source\\*" -Destination $staging -Recurse
+          Compress-Archive -Path $staging -DestinationPath $zipPath
+
+          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "WINDOWS_ZIP=$zipPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Upload asset to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE_TAG" "$WINDOWS_ZIP" --clobber --repo "${{ github.repository }}"
