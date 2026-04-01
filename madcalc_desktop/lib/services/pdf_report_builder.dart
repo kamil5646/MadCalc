@@ -23,7 +23,10 @@ class PdfReportBuilder {
       subject: 'Raport optymalizacji cięcia',
     );
 
-    final totalItemCount = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalItemCount = items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
     final totalItemsLength = items.fold<int>(
       0,
       (sum, item) => sum + item.totalLengthMm,
@@ -49,15 +52,15 @@ class PdfReportBuilder {
             pw.SizedBox(height: 4),
             pw.Text(
               'Raport optymalizacji cięcia sztang',
-              style: pw.TextStyle(
-                fontSize: 11,
-                fontWeight: pw.FontWeight.bold,
-              ),
+              style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 2),
             pw.Text(
               'Wygenerowano ${_formatDate(generatedAt)}',
-              style: const pw.TextStyle(fontSize: 9, color: PdfColors.blueGrey700),
+              style: const pw.TextStyle(
+                fontSize: 9,
+                color: PdfColors.blueGrey700,
+              ),
             ),
             pw.SizedBox(height: 14),
             _buildTable(
@@ -78,7 +81,10 @@ class PdfReportBuilder {
                 ],
               ],
               columnFlex: const [2, 8],
-              alignments: const [pw.Alignment.centerLeft, pw.Alignment.centerLeft],
+              alignments: const [
+                pw.Alignment.centerLeft,
+                pw.Alignment.centerLeft,
+              ],
             ),
             pw.SizedBox(height: 12),
             _buildTable(
@@ -145,7 +151,10 @@ class PdfReportBuilder {
     return rows;
   }
 
-  List<String> _chunkCuts(List<String> cuts, {required int maxCharactersPerLine}) {
+  List<String> _chunkCuts(
+    List<String> cuts, {
+    required int maxCharactersPerLine,
+  }) {
     final lines = <String>[];
     var currentLine = '';
     for (final cut in cuts) {
@@ -195,9 +204,7 @@ class PdfReportBuilder {
           ),
           children: [
             pw.TableRow(
-              decoration: pw.BoxDecoration(
-                color: PdfColor.fromHex('#E8EFF7'),
-              ),
+              decoration: pw.BoxDecoration(color: PdfColor.fromHex('#E8EFF7')),
               children: [
                 for (var index = 0; index < headers.length; index++)
                   _buildTableCell(
@@ -211,10 +218,7 @@ class PdfReportBuilder {
               pw.TableRow(
                 children: [
                   for (var index = 0; index < row.length; index++)
-                    _buildTableCell(
-                      row[index],
-                      alignment: alignments[index],
-                    ),
+                    _buildTableCell(row[index], alignment: alignments[index]),
                 ],
               ),
           ],
@@ -254,4 +258,26 @@ class PdfReportBuilder {
   String _formatPercent(double value) {
     return value.toStringAsFixed(1).replaceAll('.', ',');
   }
+}
+
+Future<Uint8List> buildPdfInBackground(Map<String, dynamic> payload) {
+  final items = (payload['items'] as List<dynamic>)
+      .map((item) => CutItem.fromJson(Map<String, dynamic>.from(item as Map)))
+      .toList();
+  final settings = CutSettings.fromJson(
+    Map<String, dynamic>.from(payload['settings'] as Map),
+  );
+  final result = OptimizationResult.fromJson(
+    Map<String, dynamic>.from(payload['result'] as Map),
+  );
+  final unit = MeasurementUnit.fromRaw(payload['unit'] as String);
+  final generatedAt = DateTime.parse(payload['generatedAt'] as String);
+
+  return PdfReportBuilder().build(
+    items: items,
+    settings: settings,
+    result: result,
+    unit: unit,
+    generatedAt: generatedAt,
+  );
 }

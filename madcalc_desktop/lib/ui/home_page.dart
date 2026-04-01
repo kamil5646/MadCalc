@@ -6,10 +6,7 @@ import '../models/cut_item.dart';
 import '../models/measurement_unit.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({
-    required this.controller,
-    super.key,
-  });
+  const HomePage({required this.controller, super.key});
 
   final MadCalcController controller;
 
@@ -26,10 +23,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _itemLengthController = TextEditingController(text: widget.controller.itemLengthInput);
-    _itemQuantityController = TextEditingController(text: widget.controller.itemQuantityInput);
-    _stockLengthController = TextEditingController(text: widget.controller.stockLengthInput);
-    _sawThicknessController = TextEditingController(text: widget.controller.sawThicknessInput);
+    _itemLengthController = TextEditingController(
+      text: widget.controller.itemLengthInput,
+    );
+    _itemQuantityController = TextEditingController(
+      text: widget.controller.itemQuantityInput,
+    );
+    _stockLengthController = TextEditingController(
+      text: widget.controller.stockLengthInput,
+    );
+    _sawThicknessController = TextEditingController(
+      text: widget.controller.sawThicknessInput,
+    );
   }
 
   @override
@@ -61,15 +66,15 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   'MadCalc',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Offline planner cięcia sztang na macOS, Windows i Android',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF5D655F),
-                      ),
+                    color: const Color(0xFF5D655F),
+                  ),
                 ),
               ],
             ),
@@ -89,8 +94,14 @@ class _HomePageState extends State<HomePage> {
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final wide = constraints.maxWidth >= 1120;
-                          final leftColumn = _buildLeftColumn(context, controller);
-                          final rightColumn = _buildRightColumn(context, controller);
+                          final leftColumn = _buildLeftColumn(
+                            context,
+                            controller,
+                          );
+                          final rightColumn = _buildRightColumn(
+                            context,
+                            controller,
+                          );
 
                           if (wide) {
                             return Row(
@@ -138,7 +149,9 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: TextField(
                       controller: _itemLengthController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Długość (${controller.unit.label})',
                       ),
@@ -164,7 +177,9 @@ class _HomePageState extends State<HomePage> {
                   FilledButton.icon(
                     onPressed: _handleSaveItem,
                     icon: Icon(
-                      controller.isEditingItem ? Icons.check_rounded : Icons.add_rounded,
+                      controller.isEditingItem
+                          ? Icons.check_rounded
+                          : Icons.add_rounded,
                     ),
                     label: Text(controller.itemActionTitle),
                   ),
@@ -183,16 +198,22 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 24),
         _Panel(
           title: 'Lista elementów',
-          subtitle: 'Każdy wpis przechowujemy lokalnie. Nic nie wymaga internetu.',
+          subtitle:
+              'Każdy wpis przechowujemy lokalnie. Nic nie wymaga internetu.',
           child: controller.items.isEmpty
               ? _EmptyState(
                   icon: Icons.straighten_rounded,
                   title: 'Brak elementów do cięcia',
-                  message: 'Dodaj pierwszy wymiar i ilość sztuk, a potem wygenerujemy plan.',
+                  message:
+                      'Dodaj pierwszy wymiar i ilość sztuk, a potem wygenerujemy plan.',
                 )
               : Column(
                   children: [
-                    for (var index = 0; index < controller.items.length; index++) ...[
+                    for (
+                      var index = 0;
+                      index < controller.items.length;
+                      index++
+                    ) ...[
                       _ItemRow(
                         item: controller.items[index],
                         controller: controller,
@@ -215,7 +236,8 @@ class _HomePageState extends State<HomePage> {
       children: [
         _Panel(
           title: 'Parametry cięcia',
-          subtitle: 'Pracuj w centymetrach albo milimetrach. Wynik liczymy lokalnie.',
+          subtitle:
+              'Pracuj w centymetrach albo milimetrach. Wynik liczymy lokalnie.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -245,7 +267,9 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: TextField(
                       controller: _stockLengthController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Długość sztangi (${controller.unit.label})',
                       ),
@@ -256,7 +280,9 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: TextField(
                       controller: _sawThicknessController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Grubość piły (${controller.unit.label})',
                       ),
@@ -271,7 +297,8 @@ class _HomePageState extends State<HomePage> {
                 runSpacing: 10,
                 children: [
                   FilledButton.icon(
-                    onPressed: controller.canGenerate && !controller.isGenerating
+                    onPressed:
+                        controller.canGenerate && !controller.isGenerating
                         ? _handleGenerate
                         : null,
                     icon: controller.isGenerating
@@ -282,7 +309,9 @@ class _HomePageState extends State<HomePage> {
                           )
                         : const Icon(Icons.auto_awesome_rounded),
                     label: Text(
-                      controller.isGenerating ? 'Liczę plan...' : 'Generuj plan',
+                      controller.isGenerating
+                          ? 'Liczę plan...'
+                          : 'Generuj plan',
                     ),
                   ),
                   OutlinedButton.icon(
@@ -297,8 +326,16 @@ class _HomePageState extends State<HomePage> {
                   ),
                   OutlinedButton.icon(
                     onPressed: controller.canExport ? _handleExport : null,
-                    icon: const Icon(Icons.picture_as_pdf_rounded),
-                    label: const Text('Zapisz PDF'),
+                    icon: controller.isExporting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.picture_as_pdf_rounded),
+                    label: Text(
+                      controller.isExporting ? 'Tworzę PDF...' : 'Zapisz PDF',
+                    ),
                   ),
                 ],
               ),
@@ -307,8 +344,8 @@ class _HomePageState extends State<HomePage> {
                 SelectableText(
                   'Ostatni eksport: ${controller.lastExportPath}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF5D655F),
-                      ),
+                    color: const Color(0xFF5D655F),
+                  ),
                 ),
               ],
             ],
@@ -324,7 +361,8 @@ class _HomePageState extends State<HomePage> {
               ? const _EmptyState(
                   icon: Icons.inventory_2_outlined,
                   title: 'Brak wygenerowanego planu',
-                  message: 'Uzupełnij dane po lewej stronie i uruchom generowanie.',
+                  message:
+                      'Uzupełnij dane po lewej stronie i uruchom generowanie.',
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,16 +381,18 @@ class _HomePageState extends State<HomePage> {
                         ),
                         _MetricTile(
                           label: 'Wykorzystanie',
-                          value: '${controller.formatPercent(result.utilizationPercent)}%',
+                          value:
+                              '${controller.formatPercent(result.utilizationPercent)}%',
                         ),
                       ],
                     ),
                     const SizedBox(height: 18),
-                    for (var index = 0; index < result.bars.length; index++) ...[
-                      _BarCard(
-                        bar: result.bars[index],
-                        controller: controller,
-                      ),
+                    for (
+                      var index = 0;
+                      index < result.bars.length;
+                      index++
+                    ) ...[
+                      _BarCard(bar: result.bars[index], controller: controller),
                       if (index < result.bars.length - 1)
                         const SizedBox(height: 14),
                     ],
@@ -365,9 +405,15 @@ class _HomePageState extends State<HomePage> {
 
   void _syncControllers() {
     _syncController(_itemLengthController, widget.controller.itemLengthInput);
-    _syncController(_itemQuantityController, widget.controller.itemQuantityInput);
+    _syncController(
+      _itemQuantityController,
+      widget.controller.itemQuantityInput,
+    );
     _syncController(_stockLengthController, widget.controller.stockLengthInput);
-    _syncController(_sawThicknessController, widget.controller.sawThicknessInput);
+    _syncController(
+      _sawThicknessController,
+      widget.controller.sawThicknessInput,
+    );
   }
 
   void _syncController(TextEditingController textController, String value) {
@@ -411,7 +457,9 @@ class _HomePageState extends State<HomePage> {
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: isError ? const Color(0xFF8C2F39) : const Color(0xFF2C5A44),
+          backgroundColor: isError
+              ? const Color(0xFF8C2F39)
+              : const Color(0xFF2C5A44),
         ),
       );
   }
@@ -474,7 +522,10 @@ class _HeroPanel extends StatelessWidget {
               children: const [
                 _HeroBadge(icon: Icons.cloud_off_rounded, label: 'Offline'),
                 _HeroBadge(icon: Icons.picture_as_pdf_rounded, label: 'PDF'),
-                _HeroBadge(icon: Icons.desktop_windows_rounded, label: 'Windows'),
+                _HeroBadge(
+                  icon: Icons.desktop_windows_rounded,
+                  label: 'Windows',
+                ),
                 _HeroBadge(icon: Icons.laptop_mac_rounded, label: 'macOS'),
                 _HeroBadge(icon: Icons.android_rounded, label: 'Android'),
               ],
@@ -487,10 +538,7 @@ class _HeroPanel extends StatelessWidget {
 }
 
 class _HeroBadge extends StatelessWidget {
-  const _HeroBadge({
-    required this.icon,
-    required this.label,
-  });
+  const _HeroBadge({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -545,17 +593,17 @@ class _Panel extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF5D655F),
-                    height: 1.35,
-                  ),
+                color: const Color(0xFF5D655F),
+                height: 1.35,
+              ),
             ),
             const SizedBox(height: 18),
             child,
@@ -567,10 +615,7 @@ class _Panel extends StatelessWidget {
 }
 
 class _ItemRow extends StatelessWidget {
-  const _ItemRow({
-    required this.item,
-    required this.controller,
-  });
+  const _ItemRow({required this.item, required this.controller});
 
   final CutItem item;
   final MadCalcController controller;
@@ -618,10 +663,7 @@ class _ItemRow extends StatelessWidget {
 }
 
 class _MetricTile extends StatelessWidget {
-  const _MetricTile({
-    required this.label,
-    required this.value,
-  });
+  const _MetricTile({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -641,16 +683,16 @@ class _MetricTile extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF5D655F),
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5D655F)),
           ),
           const SizedBox(height: 6),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -659,10 +701,7 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _BarCard extends StatelessWidget {
-  const _BarCard({
-    required this.bar,
-    required this.controller,
-  });
+  const _BarCard({required this.bar, required this.controller});
 
   final BarPlan bar;
   final MadCalcController controller;
@@ -689,10 +728,7 @@ class _BarCard extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
-                _MetricTile(
-                  label: 'Elementów',
-                  value: '${bar.cutCount}',
-                ),
+                _MetricTile(label: 'Elementów', value: '${bar.cutCount}'),
                 _MetricTile(
                   label: 'Suma elementów',
                   value: controller.formatLength(bar.totalCutsLengthMm),
@@ -710,9 +746,9 @@ class _BarCard extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               'Cięcia',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Container(
@@ -724,15 +760,17 @@ class _BarCard extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               child: SelectableText(
                 bar.cutsMm.map(controller.formatLength).join('  •  '),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(height: 1.5),
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'Łączna grubość piły: ${controller.formatLength(controller.totalSawThickness(bar))}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF5D655F),
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5D655F)),
             ),
           ],
         ),
@@ -742,11 +780,7 @@ class _BarCard extends StatelessWidget {
 }
 
 class BarNameField extends StatefulWidget {
-  const BarNameField({
-    required this.bar,
-    required this.onChanged,
-    super.key,
-  });
+  const BarNameField({required this.bar, required this.onChanged, super.key});
 
   final BarPlan bar;
   final ValueChanged<String> onChanged;
@@ -767,7 +801,8 @@ class _BarNameFieldState extends State<BarNameField> {
   @override
   void didUpdateWidget(covariant BarNameField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.bar.id != widget.bar.id || oldWidget.bar.name != widget.bar.name) {
+    if (oldWidget.bar.id != widget.bar.id ||
+        oldWidget.bar.name != widget.bar.name) {
       _controller.value = TextEditingValue(
         text: widget.bar.name,
         selection: TextSelection.collapsed(offset: widget.bar.name.length),
@@ -821,18 +856,18 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
             message,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF5D655F),
-                  height: 1.45,
-                ),
+              color: const Color(0xFF5D655F),
+              height: 1.45,
+            ),
           ),
         ],
       ),

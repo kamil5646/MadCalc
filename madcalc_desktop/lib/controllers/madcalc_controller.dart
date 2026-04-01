@@ -14,11 +14,8 @@ import '../services/pdf_report_builder.dart';
 import '../services/state_persistence.dart';
 
 class MadCalcController extends ChangeNotifier {
-  MadCalcController({
-    StatePersistence? persistence,
-    PdfReportBuilder? pdfReportBuilder,
-  })  : _persistence = persistence ?? StatePersistence(),
-        _pdfReportBuilder = pdfReportBuilder ?? PdfReportBuilder();
+  MadCalcController({StatePersistence? persistence})
+    : _persistence = persistence ?? StatePersistence();
 
   static Future<MadCalcController> create() async {
     final controller = MadCalcController();
@@ -27,7 +24,6 @@ class MadCalcController extends ChangeNotifier {
   }
 
   final StatePersistence _persistence;
-  final PdfReportBuilder _pdfReportBuilder;
 
   MeasurementUnit unit = MeasurementUnit.centimeters;
   String itemLengthInput = '';
@@ -39,13 +35,15 @@ class MadCalcController extends ChangeNotifier {
   CutSettings? generatedSettings;
   DateTime? generatedAt;
   bool isGenerating = false;
+  bool isExporting = false;
   String? lastExportPath;
 
   String? _editingItemId;
 
   bool get isEditingItem => _editingItemId != null;
 
-  String get itemActionTitle => isEditingItem ? 'Zapisz element' : 'Dodaj element';
+  String get itemActionTitle =>
+      isEditingItem ? 'Zapisz element' : 'Dodaj element';
 
   String get itemHint {
     return switch (unit) {
@@ -55,11 +53,17 @@ class MadCalcController extends ChangeNotifier {
   }
 
   bool get canGenerate {
-    return items.isNotEmpty && !isGenerating && _readSettings(showErrors: false) != null;
+    return items.isNotEmpty &&
+        !isGenerating &&
+        _readSettings(showErrors: false) != null;
   }
 
   bool get canExport {
-    return result != null && generatedSettings != null && generatedAt != null;
+    return result != null &&
+        generatedSettings != null &&
+        generatedAt != null &&
+        !isGenerating &&
+        !isExporting;
   }
 
   Future<void> _loadState() async {
@@ -67,8 +71,14 @@ class MadCalcController extends ChangeNotifier {
     if (persisted != null) {
       unit = persisted.unit;
       items = persisted.items;
-      stockLengthInput = unit.format(persisted.stockLengthMm, includeUnit: false);
-      sawThicknessInput = unit.format(persisted.sawThicknessMm, includeUnit: false);
+      stockLengthInput = unit.format(
+        persisted.stockLengthMm,
+        includeUnit: false,
+      );
+      sawThicknessInput = unit.format(
+        persisted.sawThicknessMm,
+        includeUnit: false,
+      );
       result = persisted.result;
       generatedSettings = persisted.generatedSettings;
       generatedAt = persisted.generatedAt;
@@ -104,9 +114,21 @@ class MadCalcController extends ChangeNotifier {
       return;
     }
 
-    itemLengthInput = _convertDisplayedValue(itemLengthInput, from: unit, to: nextUnit);
-    stockLengthInput = _convertDisplayedValue(stockLengthInput, from: unit, to: nextUnit);
-    sawThicknessInput = _convertDisplayedValue(sawThicknessInput, from: unit, to: nextUnit);
+    itemLengthInput = _convertDisplayedValue(
+      itemLengthInput,
+      from: unit,
+      to: nextUnit,
+    );
+    stockLengthInput = _convertDisplayedValue(
+      stockLengthInput,
+      from: unit,
+      to: nextUnit,
+    );
+    sawThicknessInput = _convertDisplayedValue(
+      sawThicknessInput,
+      from: unit,
+      to: nextUnit,
+    );
     unit = nextUnit;
     _persistLater();
     notifyListeners();
@@ -221,20 +243,20 @@ class MadCalcController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final optimizedJson = await compute<Map<String, dynamic>, Map<String, dynamic>>(
-        optimizeCutsInBackground,
-        <String, dynamic>{
-          'items': items.map((item) => item.toJson()).toList(),
-          'settings': settings.toJson(),
-        },
-      );
+      final optimizedJson =
+          await compute<Map<String, dynamic>, Map<String, dynamic>>(
+            optimizeCutsInBackground,
+            <String, dynamic>{
+              'items': items.map((item) => item.toJson()).toList(),
+              'settings': settings.toJson(),
+            },
+          );
 
       final optimized = OptimizationResult.fromJson(optimizedJson);
       final namedBars = optimized.bars
           .map(
-            (bar) => bar.copyWith(
-              name: existingBarNames[bar.barIndex] ?? bar.name,
-            ),
+            (bar) =>
+                bar.copyWith(name: existingBarNames[bar.barIndex] ?? bar.name),
           )
           .toList();
 
@@ -259,7 +281,9 @@ class MadCalcController extends ChangeNotifier {
     final currentSettings = generatedSettings;
     final currentGeneratedAt = generatedAt;
 
-    if (currentResult == null || currentSettings == null || currentGeneratedAt == null) {
+    if (currentResult == null ||
+        currentSettings == null ||
+        currentGeneratedAt == null) {
       return 'Najpierw wygeneruj plan cięcia.';
     }
 
@@ -274,13 +298,19 @@ class MadCalcController extends ChangeNotifier {
       return null;
     }
 
+    isExporting = true;
+    notifyListeners();
+
     try {
-      final data = await _pdfReportBuilder.build(
-        items: items,
-        settings: currentSettings,
-        result: currentResult,
-        unit: unit,
-        generatedAt: currentGeneratedAt,
+      final data = await compute<Map<String, dynamic>, Uint8List>(
+        buildPdfInBackground,
+        <String, dynamic>{
+          'items': items.map((item) => item.toJson()).toList(),
+          'settings': currentSettings.toJson(),
+          'result': currentResult.toJson(),
+          'unit': unit.name,
+          'generatedAt': currentGeneratedAt.toIso8601String(),
+        },
       );
       final path = location.path.toLowerCase().endsWith('.pdf')
           ? location.path
@@ -288,10 +318,12 @@ class MadCalcController extends ChangeNotifier {
       final file = File(path);
       await file.writeAsBytes(data, flush: true);
       lastExportPath = path;
-      notifyListeners();
       return 'PDF zapisany w: $path';
     } catch (_) {
       return 'Nie udało się zapisać raportu PDF.';
+    } finally {
+      isExporting = false;
+      notifyListeners();
     }
   }
 
@@ -333,7 +365,8 @@ class MadCalcController extends ChangeNotifier {
   }
 
   String? _readableSettingsError() {
-    if (unit.parse(stockLengthInput) == null || unit.parse(stockLengthInput)! <= 0) {
+    if (unit.parse(stockLengthInput) == null ||
+        unit.parse(stockLengthInput)! <= 0) {
       return 'Długość sztangi musi być większa od zera.';
     }
     final sawThicknessMm = unit.parse(sawThicknessInput);
