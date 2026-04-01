@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show listEquals;
+
 import '../models/bar_plan.dart';
 import '../models/cut_item.dart';
 import '../models/cut_settings.dart';
@@ -13,41 +15,28 @@ class CutOptimizationException implements Exception {
 }
 
 class CutOptimizer {
+  static const int _exactSearchNodeLimit = 250000;
+
   OptimizationResult optimize({
     required List<CutItem> items,
     required CutSettings settings,
   }) {
     _validateInput(items: items, settings: settings);
 
-    final remaining = _expandAndSort(items).toList();
-    final bars = <BarPlan>[];
+    final cuts = _expandAndSort(items);
+    final heuristicBars = _buildGreedyBars(cuts: cuts, settings: settings);
+    final minimumBarCount = _minimumPossibleBarCount(cuts: cuts, settings: settings);
+    final exactPacking = heuristicBars.length > minimumBarCount
+        ? _findExactPacking(
+            cuts: cuts,
+            settings: settings,
+            startingBarCount: minimumBarCount,
+            maximumBarCount: heuristicBars.length - 1,
+          )
+        : null;
 
-    while (remaining.isNotEmpty) {
-      final selection = _findBestCombination(
-        remaining: remaining,
-        settings: settings,
-      );
-      if (selection.indices.isEmpty) {
-        throw CutOptimizationException(
-          'Nie udało się ułożyć planu cięcia dla podanych danych.',
-        );
-      }
-
-      final cuts = selection.indices.map((index) => remaining[index]).toList();
-      for (final index in selection.indices.reversed) {
-        remaining.removeAt(index);
-      }
-
-      bars.add(
-        BarPlan(
-          barIndex: bars.length + 1,
-          name: '',
-          cutsMm: cuts,
-          usedLengthMm: selection.usedLengthMm,
-          wasteMm: selection.wasteMm,
-        ),
-      );
-    }
+    final bars =
+        exactPacking != null ? _buildBarPlans(cutsByBar: exactPacking, settings: settings) : heuristicBars;
 
     final totalWasteMm = bars.fold<int>(0, (sum, bar) => sum + bar.wasteMm);
     final totalStockMm = bars.length * settings.stockLengthMm;
@@ -104,6 +93,231 @@ class CutOptimizer {
     }
     expanded.sort((left, right) => right.compareTo(left));
     return expanded;
+  }
+
+  int _minimumPossibleBarCount({
+    required List<int> cuts,
+    required CutSettings settings,
+  }) {
+    final adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm;
+    final totalAdjustedLength =
+        cuts.fold<int>(0, (sum, cut) => sum + cut) + (settings.sawThicknessMm * cuts.length);
+    final minimumBarCount = (totalAdjustedLength + adjustedCapacity - 1) ~/ adjustedCapacity;
+    return minimumBarCount < 1 ? 1 : minimumBarCount;
+  }
+
+  List<BarPlan> _buildGreedyBars({
+    required List<int> cuts,
+    required CutSettings settings,
+  }) {
+    final remaining = cuts.toList();
+    final bars = <BarPlan>[];
+
+    while (remaining.isNotEmpty) {
+      final selection = _findBestCombination(
+        remaining: remaining,
+        settings: settings,
+      );
+      if (selection.indices.isEmpty) {
+        throw CutOptimizationException(
+          'Nie udało się ułożyć planu cięcia dla podanych danych.',
+        );
+      }
+
+      final selectedCuts = selection.indices.map((index) => remaining[index]).toList();
+      for (final index in selection.indices.reversed) {
+        remaining.removeAt(index);
+      }
+
+      bars.add(
+        BarPlan(
+          barIndex: bars.length + 1,
+          name: '',
+          cutsMm: selectedCuts,
+          usedLengthMm: selection.usedLengthMm,
+          wasteMm: selection.wasteMm,
+        ),
+      );
+    }
+
+    return bars;
+  }
+
+  List<List<int>>? _findExactPacking({
+    required List<int> cuts,
+    required CutSettings settings,
+    required int startingBarCount,
+    required int maximumBarCount,
+  }) {
+    if (startingBarCount > maximumBarCount) {
+      return null;
+    }
+
+    for (var barCount = startingBarCount; barCount <= maximumBarCount; barCount++) {
+      final packing = _searchFeasiblePacking(
+        cuts: cuts,
+        settings: settings,
+        barCount: barCount,
+      );
+      if (packing != null) {
+        return packing;
+      }
+    }
+
+    return null;
+  }
+
+  List<List<int>>? _searchFeasiblePacking({
+    required List<int> cuts,
+    required CutSettings settings,
+    required int barCount,
+  }) {
+    final adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm;
+    final adjustedWeights = cuts.map((cut) => cut + settings.sawThicknessMm).toList();
+    final totalAdjustedLength = adjustedWeights.fold<int>(0, (sum, value) => sum + value);
+    if (totalAdjustedLength > barCount * adjustedCapacity) {
+      return null;
+    }
+
+    final suffixAdjustedWeights = List<int>.filled(cuts.length + 1, 0);
+    for (var index = cuts.length - 1; index >= 0; index--) {
+      suffixAdjustedWeights[index] = suffixAdjustedWeights[index + 1] + adjustedWeights[index];
+    }
+
+    final bars = List<_SearchBar>.generate(barCount, (_) => _SearchBar());
+    final failedStates = <_SearchState>{};
+    var visitedNodes = 0;
+    var aborted = false;
+
+    bool dfs(int cutIndex) {
+      if (cutIndex == cuts.length) {
+        return true;
+      }
+
+      if (visitedNodes >= _exactSearchNodeLimit) {
+        aborted = true;
+        return false;
+      }
+      visitedNodes++;
+
+      final remainingCapacity = (barCount * adjustedCapacity) -
+          bars.fold<int>(0, (sum, bar) => sum + bar.adjustedUsed);
+      if (suffixAdjustedWeights[cutIndex] > remainingCapacity) {
+        return false;
+      }
+
+      final state = _SearchState(
+        cutIndex,
+        (bars.map((bar) => bar.adjustedUsed).toList()..sort()),
+      );
+      if (failedStates.contains(state)) {
+        return false;
+      }
+
+      final cut = cuts[cutIndex];
+      final adjustedWeight = adjustedWeights[cutIndex];
+      final candidateIndices = bars.asMap().entries
+          .where((entry) => entry.value.adjustedUsed + adjustedWeight <= adjustedCapacity)
+          .map((entry) => entry.key)
+          .toList()
+        ..sort((left, right) {
+          final leftRemaining = adjustedCapacity - (bars[left].adjustedUsed + adjustedWeight);
+          final rightRemaining = adjustedCapacity - (bars[right].adjustedUsed + adjustedWeight);
+          if (leftRemaining != rightRemaining) {
+            return leftRemaining.compareTo(rightRemaining);
+          }
+          if (bars[left].adjustedUsed != bars[right].adjustedUsed) {
+            return bars[right].adjustedUsed.compareTo(bars[left].adjustedUsed);
+          }
+          return left.compareTo(right);
+        });
+
+      final triedLoads = <int>{};
+
+      for (final index in candidateIndices) {
+        final previousLoad = bars[index].adjustedUsed;
+        if (!triedLoads.add(previousLoad)) {
+          continue;
+        }
+
+        bars[index].cuts.add(cut);
+        bars[index].adjustedUsed += adjustedWeight;
+
+        if (dfs(cutIndex + 1)) {
+          return true;
+        }
+
+        bars[index].cuts.removeLast();
+        bars[index].adjustedUsed -= adjustedWeight;
+
+        if (aborted) {
+          return false;
+        }
+        if (previousLoad == 0) {
+          break;
+        }
+      }
+
+      if (!aborted) {
+        failedStates.add(state);
+      }
+
+      return false;
+    }
+
+    if (!dfs(0) || aborted) {
+      return null;
+    }
+
+    return bars
+        .where((bar) => bar.cuts.isNotEmpty)
+        .map((bar) => [...bar.cuts]..sort((left, right) => right.compareTo(left)))
+        .toList();
+  }
+
+  List<BarPlan> _buildBarPlans({
+    required List<List<int>> cutsByBar,
+    required CutSettings settings,
+  }) {
+    final sortedBars = cutsByBar
+        .map((cuts) => [...cuts]..sort((left, right) => right.compareTo(left)))
+        .toList()
+      ..sort((left, right) {
+        final leftUsed = _usedLength(cuts: left, settings: settings);
+        final rightUsed = _usedLength(cuts: right, settings: settings);
+        if (leftUsed != rightUsed) {
+          return rightUsed.compareTo(leftUsed);
+        }
+        if (left.length != right.length) {
+          return right.length.compareTo(left.length);
+        }
+        for (var index = 0; index < left.length && index < right.length; index++) {
+          if (left[index] != right[index]) {
+            return right[index].compareTo(left[index]);
+          }
+        }
+        return right.length.compareTo(left.length);
+      });
+
+    return [
+      for (var index = 0; index < sortedBars.length; index++)
+        BarPlan(
+          barIndex: index + 1,
+          name: '',
+          cutsMm: sortedBars[index],
+          usedLengthMm: _usedLength(cuts: sortedBars[index], settings: settings),
+          wasteMm: settings.stockLengthMm -
+              _usedLength(cuts: sortedBars[index], settings: settings),
+        ),
+    ];
+  }
+
+  int _usedLength({
+    required List<int> cuts,
+    required CutSettings settings,
+  }) {
+    return cuts.fold<int>(0, (sum, cut) => sum + cut) +
+        (settings.sawThicknessMm * (cuts.isNotEmpty ? cuts.length - 1 : 0));
   }
 
   _BarSelection _findBestCombination({
@@ -194,6 +408,31 @@ class _BarSelection {
   final List<int> indices;
   final int usedLengthMm;
   final int wasteMm;
+}
+
+class _SearchBar {
+  final List<int> cuts = <int>[];
+  int adjustedUsed = 0;
+}
+
+class _SearchState {
+  const _SearchState(this.index, this.adjustedLoads);
+
+  final int index;
+  final List<int> adjustedLoads;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    return other is _SearchState &&
+        other.index == index &&
+        listEquals(other.adjustedLoads, adjustedLoads);
+  }
+
+  @override
+  int get hashCode => Object.hash(index, Object.hashAll(adjustedLoads));
 }
 
 Map<String, dynamic> optimizeCutsInBackground(Map<String, dynamic> payload) {

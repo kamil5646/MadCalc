@@ -7,32 +7,26 @@ struct CutOptimizationError: LocalizedError {
 }
 
 struct CutOptimizer {
+    private let exactSearchNodeLimit = 250_000
+
     func optimize(items: [CutItem], settings: CutSettings) throws -> OptimizationResult {
         try validateInput(items: items, settings: settings)
 
-        var remaining = expandAndSort(items)
-        var bars: [BarPlan] = []
+        let cuts = expandAndSort(items)
+        let heuristicBars = try buildGreedyBars(cuts: cuts, settings: settings)
+        let minimumBarCount = minimumPossibleBarCount(for: cuts, settings: settings)
 
-        while !remaining.isEmpty {
-            let selection = findBestCombination(remaining: remaining, settings: settings)
-            guard !selection.indices.isEmpty else {
-                throw CutOptimizationError(message: "Nie udało się ułożyć planu cięcia dla podanych danych.")
-            }
-
-            let cuts = selection.indices.map { remaining[$0] }
-            for index in selection.indices.reversed() {
-                remaining.remove(at: index)
-            }
-
-            bars.append(
-                BarPlan(
-                    barIndex: bars.count + 1,
-                    name: "",
-                    cutsMm: cuts,
-                    usedLengthMm: selection.usedLengthMm,
-                    wasteMm: selection.wasteMm
-                )
-            )
+        let bars: [BarPlan]
+        if heuristicBars.count > minimumBarCount,
+           let exactPacking = findExactPacking(
+               cuts: cuts,
+               settings: settings,
+               startingBarCount: minimumBarCount,
+               maximumBarCount: heuristicBars.count - 1
+           ) {
+            bars = buildBarPlans(from: exactPacking, settings: settings)
+        } else {
+            bars = heuristicBars
         }
 
         let totalWasteMm = bars.reduce(0) { $0 + $1.wasteMm }
@@ -80,6 +74,200 @@ struct CutOptimizer {
             expanded.append(contentsOf: Array(repeating: item.lengthMm, count: item.quantity))
         }
         return expanded.sorted(by: >)
+    }
+
+    private func minimumPossibleBarCount(for cuts: [Int], settings: CutSettings) -> Int {
+        let adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm
+        let totalAdjustedLength = cuts.reduce(0, +) + (settings.sawThicknessMm * cuts.count)
+        return max(1, (totalAdjustedLength + adjustedCapacity - 1) / adjustedCapacity)
+    }
+
+    private func buildGreedyBars(cuts: [Int], settings: CutSettings) throws -> [BarPlan] {
+        var remaining = cuts
+        var bars: [BarPlan] = []
+
+        while !remaining.isEmpty {
+            let selection = findBestCombination(remaining: remaining, settings: settings)
+            guard !selection.indices.isEmpty else {
+                throw CutOptimizationError(message: "Nie udało się ułożyć planu cięcia dla podanych danych.")
+            }
+
+            let selectedCuts = selection.indices.map { remaining[$0] }
+            for index in selection.indices.reversed() {
+                remaining.remove(at: index)
+            }
+
+            bars.append(
+                BarPlan(
+                    barIndex: bars.count + 1,
+                    name: "",
+                    cutsMm: selectedCuts,
+                    usedLengthMm: selection.usedLengthMm,
+                    wasteMm: selection.wasteMm
+                )
+            )
+        }
+
+        return bars
+    }
+
+    private func findExactPacking(
+        cuts: [Int],
+        settings: CutSettings,
+        startingBarCount: Int,
+        maximumBarCount: Int
+    ) -> [[Int]]? {
+        guard startingBarCount <= maximumBarCount else {
+            return nil
+        }
+
+        for barCount in startingBarCount...maximumBarCount {
+            if let packing = searchFeasiblePacking(cuts: cuts, settings: settings, barCount: barCount) {
+                return packing
+            }
+        }
+
+        return nil
+    }
+
+    private func searchFeasiblePacking(cuts: [Int], settings: CutSettings, barCount: Int) -> [[Int]]? {
+        let adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm
+        let adjustedWeights = cuts.map { $0 + settings.sawThicknessMm }
+        let totalAdjustedLength = adjustedWeights.reduce(0, +)
+
+        guard totalAdjustedLength <= barCount * adjustedCapacity else {
+            return nil
+        }
+
+        var suffixAdjustedWeights = Array(repeating: 0, count: cuts.count + 1)
+        for index in stride(from: cuts.count - 1, through: 0, by: -1) {
+            suffixAdjustedWeights[index] = suffixAdjustedWeights[index + 1] + adjustedWeights[index]
+        }
+
+        var bars = Array(repeating: SearchBar(), count: barCount)
+        var visitedNodes = 0
+        var aborted = false
+        var failedStates: Set<SearchState> = []
+
+        func dfs(_ cutIndex: Int) -> Bool {
+            if cutIndex == cuts.count {
+                return true
+            }
+
+            if visitedNodes >= exactSearchNodeLimit {
+                aborted = true
+                return false
+            }
+            visitedNodes += 1
+
+            let remainingCapacity = (barCount * adjustedCapacity) - bars.reduce(0) { $0 + $1.adjustedUsed }
+            guard suffixAdjustedWeights[cutIndex] <= remainingCapacity else {
+                return false
+            }
+
+            let state = SearchState(index: cutIndex, adjustedLoads: bars.map(\.adjustedUsed).sorted())
+            guard !failedStates.contains(state) else {
+                return false
+            }
+
+            let cut = cuts[cutIndex]
+            let adjustedWeight = adjustedWeights[cutIndex]
+
+            let candidateIndices = bars.indices
+                .filter { bars[$0].adjustedUsed + adjustedWeight <= adjustedCapacity }
+                .sorted { left, right in
+                    let leftRemaining = adjustedCapacity - (bars[left].adjustedUsed + adjustedWeight)
+                    let rightRemaining = adjustedCapacity - (bars[right].adjustedUsed + adjustedWeight)
+                    if leftRemaining != rightRemaining {
+                        return leftRemaining < rightRemaining
+                    }
+                    if bars[left].adjustedUsed != bars[right].adjustedUsed {
+                        return bars[left].adjustedUsed > bars[right].adjustedUsed
+                    }
+                    return left < right
+                }
+
+            var triedLoads: Set<Int> = []
+
+            for index in candidateIndices {
+                let previousLoad = bars[index].adjustedUsed
+                guard !triedLoads.contains(previousLoad) else {
+                    continue
+                }
+                triedLoads.insert(previousLoad)
+
+                bars[index].cuts.append(cut)
+                bars[index].adjustedUsed += adjustedWeight
+
+                if dfs(cutIndex + 1) {
+                    return true
+                }
+
+                bars[index].cuts.removeLast()
+                bars[index].adjustedUsed -= adjustedWeight
+
+                if aborted {
+                    return false
+                }
+
+                if previousLoad == 0 {
+                    break
+                }
+            }
+
+            if !aborted {
+                failedStates.insert(state)
+            }
+
+            return false
+        }
+
+        guard dfs(0), !aborted else {
+            return nil
+        }
+
+        return bars
+            .filter { !$0.cuts.isEmpty }
+            .map { $0.cuts.sorted(by: >) }
+    }
+
+    private func buildBarPlans(from bars: [[Int]], settings: CutSettings) -> [BarPlan] {
+        let sortedBars = bars
+            .map { $0.sorted(by: >) }
+            .sorted(by: { left, right in
+                let leftUsed = usedLength(for: left, settings: settings)
+                let rightUsed = usedLength(for: right, settings: settings)
+
+                if leftUsed != rightUsed {
+                    return leftUsed > rightUsed
+                }
+                if left.count != right.count {
+                    return left.count > right.count
+                }
+                return compareCuts(left, right)
+            })
+
+        return sortedBars.enumerated().map { offset, cuts in
+            let usedLengthMm = usedLength(for: cuts, settings: settings)
+            return BarPlan(
+                barIndex: offset + 1,
+                name: "",
+                cutsMm: cuts,
+                usedLengthMm: usedLengthMm,
+                wasteMm: settings.stockLengthMm - usedLengthMm
+            )
+        }
+    }
+
+    private func usedLength(for cuts: [Int], settings: CutSettings) -> Int {
+        cuts.reduce(0, +) + (settings.sawThicknessMm * max(0, cuts.count - 1))
+    }
+
+    private func compareCuts(_ left: [Int], _ right: [Int]) -> Bool {
+        for (leftCut, rightCut) in zip(left, right) where leftCut != rightCut {
+            return leftCut > rightCut
+        }
+        return left.count >= right.count
     }
 
     private func findBestCombination(remaining: [Int], settings: CutSettings) -> BarSelection {
@@ -138,4 +326,14 @@ private struct BarSelection {
     let indices: [Int]
     let usedLengthMm: Int
     let wasteMm: Int
+}
+
+private struct SearchBar {
+    var cuts: [Int] = []
+    var adjustedUsed = 0
+}
+
+private struct SearchState: Hashable {
+    let index: Int
+    let adjustedLoads: [Int]
 }
