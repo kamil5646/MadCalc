@@ -1,6 +1,6 @@
 # MadCalc Desktop
 
-Desktopowa wersja `MadCalc` dla `macOS` i `Windows`, zbudowana we Flutterze.
+Wieloplatformowa wersja `MadCalc` dla `macOS`, `Windows` i `Androida`, zbudowana we Flutterze.
 
 ## Funkcje
 
@@ -27,6 +27,12 @@ flutter run -d macos
 flutter run -d windows
 ```
 
+### Android
+
+```bash
+flutter run -d android
+```
+
 ## Build
 
 ### macOS
@@ -39,4 +45,10 @@ flutter build macos
 
 ```bash
 flutter build windows
+```
+
+### Android
+
+```bash
+flutter build apk
 ```

@@ -66,7 +66,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Offline planner cięcia sztang na macOS i Windows',
+                  'Offline planner cięcia sztang na macOS, Windows i Android',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFF5D655F),
                       ),
@@ -450,7 +450,7 @@ class _HeroPanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Jedna aplikacja, lokalnie na komputerze',
+                    'Jedna aplikacja, lokalnie na desktopie i Androidzie',
                     style: textTheme.headlineSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
@@ -459,7 +459,7 @@ class _HeroPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'MadCalc liczy plan cięcia bez internetu, pozwala nazwać każdą sztangę i zapisuje estetyczny PDF do wysłania dalej.',
+                    'MadCalc liczy plan cięcia bez internetu, pozwala nazwać każdą sztangę i zapisuje estetyczny PDF do wysłania dalej na macOS, Windows i Androidzie.',
                     style: textTheme.titleMedium?.copyWith(
                       color: const Color(0xFFEFF5FB),
                       height: 1.4,
@@ -476,6 +476,7 @@ class _HeroPanel extends StatelessWidget {
                 _HeroBadge(icon: Icons.picture_as_pdf_rounded, label: 'PDF'),
                 _HeroBadge(icon: Icons.desktop_windows_rounded, label: 'Windows'),
                 _HeroBadge(icon: Icons.laptop_mac_rounded, label: 'macOS'),
+                _HeroBadge(icon: Icons.android_rounded, label: 'Android'),
               ],
             ),
           ],
