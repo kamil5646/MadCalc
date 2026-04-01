@@ -16,11 +16,11 @@ struct CutOptimizer: Sendable {
 
         let bars: [BarPlan]
         if heuristicBars.count > minimumBarCount,
-           let exactPacking = findExactPacking(
+           let exactPacking = findOptimalPacking(
                cuts: cuts,
                settings: settings,
-               startingBarCount: minimumBarCount,
-               maximumBarCount: heuristicBars.count - 1
+               lowerBound: minimumBarCount,
+               upperBoundBars: heuristicBars
            ) {
             bars = buildBarPlans(from: exactPacking, settings: settings)
         } else {
@@ -109,55 +109,55 @@ struct CutOptimizer: Sendable {
         return bars
     }
 
-    private func findExactPacking(
+    private func findOptimalPacking(
         cuts: [Int],
         settings: CutSettings,
-        startingBarCount: Int,
-        maximumBarCount: Int
+        lowerBound: Int,
+        upperBoundBars: [BarPlan]
     ) -> [[Int]]? {
-        guard startingBarCount <= maximumBarCount else {
-            return nil
-        }
-
-        for barCount in startingBarCount...maximumBarCount {
-            if let packing = searchFeasiblePacking(cuts: cuts, settings: settings, barCount: barCount) {
-                return packing
-            }
-        }
-
-        return nil
-    }
-
-    private func searchFeasiblePacking(cuts: [Int], settings: CutSettings, barCount: Int) -> [[Int]]? {
         let adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm
         let adjustedWeights = cuts.map { $0 + settings.sawThicknessMm }
-        let totalAdjustedLength = adjustedWeights.reduce(0, +)
-
-        guard totalAdjustedLength <= barCount * adjustedCapacity else {
-            return nil
-        }
-
         var suffixAdjustedWeights = Array(repeating: 0, count: cuts.count + 1)
         for index in stride(from: cuts.count - 1, through: 0, by: -1) {
             suffixAdjustedWeights[index] = suffixAdjustedWeights[index + 1] + adjustedWeights[index]
         }
 
-        var bars = Array(repeating: SearchBar(), count: barCount)
+        var bestBarCount = upperBoundBars.count
+        guard lowerBound < bestBarCount else {
+            return nil
+        }
+
+        var bestPacking = upperBoundBars.map { $0.cutsMm.sorted(by: >) }
+        var bars: [SearchBar] = []
         var failedStates: Set<SearchState> = []
 
-        func dfs(_ cutIndex: Int) -> Bool {
+        func lowerBoundForRemaining(from cutIndex: Int) -> Int {
+            let remainingAdjustedWeight = suffixAdjustedWeights[cutIndex]
+            let freeCapacityInOpenBars = bars.reduce(0) { partial, bar in
+                partial + (adjustedCapacity - bar.adjustedUsed)
+            }
+            let overflow = max(0, remainingAdjustedWeight - freeCapacityInOpenBars)
+            let additionalBars = (overflow + adjustedCapacity - 1) / adjustedCapacity
+            return bars.count + additionalBars
+        }
+
+        func dfs(_ cutIndex: Int) {
+            if bars.count >= bestBarCount {
+                return
+            }
             if cutIndex == cuts.count {
-                return true
+                bestBarCount = bars.count
+                bestPacking = bars.map { $0.cuts.sorted(by: >) }
+                return
             }
 
-            let remainingCapacity = (barCount * adjustedCapacity) - bars.reduce(0) { $0 + $1.adjustedUsed }
-            guard suffixAdjustedWeights[cutIndex] <= remainingCapacity else {
-                return false
+            guard lowerBoundForRemaining(from: cutIndex) < bestBarCount else {
+                return
             }
 
             let state = SearchState(index: cutIndex, adjustedLoads: bars.map(\.adjustedUsed).sorted())
             guard !failedStates.contains(state) else {
-                return false
+                return
             }
 
             let cut = cuts[cutIndex]
@@ -189,30 +189,22 @@ struct CutOptimizer: Sendable {
                 bars[index].cuts.append(cut)
                 bars[index].adjustedUsed += adjustedWeight
 
-                if dfs(cutIndex + 1) {
-                    return true
-                }
-
+                dfs(cutIndex + 1)
                 bars[index].cuts.removeLast()
                 bars[index].adjustedUsed -= adjustedWeight
+            }
 
-                if previousLoad == 0 {
-                    break
-                }
+            if bars.count + 1 < bestBarCount {
+                bars.append(SearchBar(cuts: [cut], adjustedUsed: adjustedWeight))
+                dfs(cutIndex + 1)
+                bars.removeLast()
             }
 
             failedStates.insert(state)
-
-            return false
         }
 
-        guard dfs(0) else {
-            return nil
-        }
-
-        return bars
-            .filter { !$0.cuts.isEmpty }
-            .map { $0.cuts.sorted(by: >) }
+        dfs(0)
+        return bestBarCount < upperBoundBars.count ? bestPacking : nil
     }
 
     private func buildBarPlans(from bars: [[Int]], settings: CutSettings) -> [BarPlan] {
