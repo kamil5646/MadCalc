@@ -2,6 +2,39 @@ import XCTest
 @testable import MadCalc
 
 final class CutOptimizerTests: XCTestCase {
+    func testMatchesBruteForceMinimumBarCountForSmallRandomCases() throws {
+        let optimizer = CutOptimizer()
+        var generator = SeededGenerator(seed: 0xC0FFEE)
+
+        for _ in 0..<250 {
+            let stockLength = Int.random(in: 70...150, using: &generator)
+            let sawThickness = Int.random(in: 0...3, using: &generator)
+            let pieceCount = Int.random(in: 1...8, using: &generator)
+            let cuts = (0..<pieceCount).map { _ in
+                Int.random(in: 10...stockLength, using: &generator)
+            }
+
+            let items = groupedItems(from: cuts)
+            let result = try optimizer.optimize(
+                items: items,
+                settings: CutSettings(stockLengthMm: stockLength, sawThicknessMm: sawThickness)
+            )
+
+            let bruteForceCount = minimumBarCountByBruteForce(
+                cuts: cuts.sorted(by: >),
+                stockLengthMm: stockLength,
+                sawThicknessMm: sawThickness
+            )
+
+            XCTAssertEqual(
+                result.barCount,
+                bruteForceCount,
+                "Niezgodność dla cięć \(cuts), sztangi \(stockLength) i grubości piły \(sawThickness)"
+            )
+            XCTAssertTrue(result.bars.allSatisfy { $0.usedLengthMm <= stockLength })
+        }
+    }
+
     func testFindsBetterPackingThanOldGreedyCaseWithoutSawThickness() throws {
         let optimizer = CutOptimizer()
 
@@ -58,5 +91,74 @@ final class CutOptimizerTests: XCTestCase {
 
         XCTAssertEqual(second.barCount, first.barCount)
         XCTAssertEqual(second.bars.map(\.cutsMm), first.bars.map(\.cutsMm))
+    }
+
+    private func groupedItems(from cuts: [Int]) -> [CutItem] {
+        let grouped = Dictionary(grouping: cuts, by: { $0 })
+        return grouped
+            .sorted(by: { $0.key > $1.key })
+            .map { length, values in
+                CutItem(lengthMm: length, quantity: values.count)
+            }
+    }
+
+    private func minimumBarCountByBruteForce(
+        cuts: [Int],
+        stockLengthMm: Int,
+        sawThicknessMm: Int
+    ) -> Int {
+        var best = cuts.count
+        var usedLengths: [Int] = []
+
+        func search(_ index: Int) {
+            if usedLengths.count >= best {
+                return
+            }
+            if index == cuts.count {
+                best = min(best, usedLengths.count)
+                return
+            }
+
+            let cut = cuts[index]
+            var triedLoads: Set<Int> = []
+
+            for barIndex in usedLengths.indices {
+                let previousUsed = usedLengths[barIndex]
+                guard triedLoads.insert(previousUsed).inserted else {
+                    continue
+                }
+
+                let nextUsed = previousUsed == 0
+                    ? cut
+                    : previousUsed + sawThicknessMm + cut
+                guard nextUsed <= stockLengthMm else {
+                    continue
+                }
+
+                usedLengths[barIndex] = nextUsed
+                search(index + 1)
+                usedLengths[barIndex] = previousUsed
+            }
+
+            usedLengths.append(cut)
+            search(index + 1)
+            usedLengths.removeLast()
+        }
+
+        search(0)
+        return best
+    }
+}
+
+private struct SeededGenerator: RandomNumberGenerator {
+    private var state: UInt64
+
+    init(seed: UInt64) {
+        self.state = seed
+    }
+
+    mutating func next() -> UInt64 {
+        state = 6364136223846793005 &* state &+ 1442695040888963407
+        return state
     }
 }

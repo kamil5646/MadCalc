@@ -7,8 +7,6 @@ struct CutOptimizationError: LocalizedError, Sendable {
 }
 
 struct CutOptimizer: Sendable {
-    private let exactSearchNodeLimit = 250_000
-
     func optimize(items: [CutItem], settings: CutSettings) throws -> OptimizationResult {
         try validateInput(items: items, settings: settings)
 
@@ -145,20 +143,12 @@ struct CutOptimizer: Sendable {
         }
 
         var bars = Array(repeating: SearchBar(), count: barCount)
-        var visitedNodes = 0
-        var aborted = false
         var failedStates: Set<SearchState> = []
 
         func dfs(_ cutIndex: Int) -> Bool {
             if cutIndex == cuts.count {
                 return true
             }
-
-            if visitedNodes >= exactSearchNodeLimit {
-                aborted = true
-                return false
-            }
-            visitedNodes += 1
 
             let remainingCapacity = (barCount * adjustedCapacity) - bars.reduce(0) { $0 + $1.adjustedUsed }
             guard suffixAdjustedWeights[cutIndex] <= remainingCapacity else {
@@ -206,23 +196,17 @@ struct CutOptimizer: Sendable {
                 bars[index].cuts.removeLast()
                 bars[index].adjustedUsed -= adjustedWeight
 
-                if aborted {
-                    return false
-                }
-
                 if previousLoad == 0 {
                     break
                 }
             }
 
-            if !aborted {
-                failedStates.insert(state)
-            }
+            failedStates.insert(state)
 
             return false
         }
 
-        guard dfs(0), !aborted else {
+        guard dfs(0) else {
             return nil
         }
 

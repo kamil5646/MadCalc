@@ -5,6 +5,46 @@ import 'package:madcalc_desktop/services/cut_optimizer.dart';
 
 void main() {
   group('CutOptimizer', () {
+    test('matches brute force minimum bar count for small random cases', () {
+      final optimizer = CutOptimizer();
+      final random = _SeededRandom(0xC0FFEE);
+
+      for (var iteration = 0; iteration < 250; iteration++) {
+        final stockLength = random.nextIntInRange(70, 150);
+        final sawThickness = random.nextIntInRange(0, 3);
+        final pieceCount = random.nextIntInRange(1, 8);
+        final cuts = [
+          for (var index = 0; index < pieceCount; index++)
+            random.nextIntInRange(10, stockLength),
+        ];
+
+        final result = optimizer.optimize(
+          items: _groupedItems(cuts),
+          settings: CutSettings(
+            stockLengthMm: stockLength,
+            sawThicknessMm: sawThickness,
+          ),
+        );
+
+        final bruteForceCount = _minimumBarCountByBruteForce(
+          cuts: [...cuts]..sort((left, right) => right.compareTo(left)),
+          stockLengthMm: stockLength,
+          sawThicknessMm: sawThickness,
+        );
+
+        expect(
+          result.barCount,
+          bruteForceCount,
+          reason:
+              'Mismatch for cuts $cuts, stock $stockLength and saw thickness $sawThickness',
+        );
+        expect(
+          result.bars.every((bar) => bar.usedLengthMm <= stockLength),
+          isTrue,
+        );
+      }
+    });
+
     test('finds a better packing than the old greedy case without kerf', () {
       final optimizer = CutOptimizer();
 
@@ -68,4 +108,81 @@ void main() {
       );
     });
   });
+}
+
+List<CutItem> _groupedItems(List<int> cuts) {
+  final grouped = <int, int>{};
+  for (final cut in cuts) {
+    grouped.update(cut, (count) => count + 1, ifAbsent: () => 1);
+  }
+
+  final lengths = grouped.keys.toList()..sort((left, right) => right.compareTo(left));
+  return [
+    for (final length in lengths)
+      CutItem(
+        id: 'cut-$length',
+        lengthMm: length,
+        quantity: grouped[length]!,
+      ),
+  ];
+}
+
+int _minimumBarCountByBruteForce({
+  required List<int> cuts,
+  required int stockLengthMm,
+  required int sawThicknessMm,
+}) {
+  var best = cuts.length;
+  final usedLengths = <int>[];
+
+  void search(int index) {
+    if (usedLengths.length >= best) {
+      return;
+    }
+    if (index == cuts.length) {
+      if (usedLengths.length < best) {
+        best = usedLengths.length;
+      }
+      return;
+    }
+
+    final cut = cuts[index];
+    final triedLoads = <int>{};
+
+    for (var barIndex = 0; barIndex < usedLengths.length; barIndex++) {
+      final previousUsed = usedLengths[barIndex];
+      if (!triedLoads.add(previousUsed)) {
+        continue;
+      }
+
+      final nextUsed =
+          previousUsed == 0 ? cut : previousUsed + sawThicknessMm + cut;
+      if (nextUsed > stockLengthMm) {
+        continue;
+      }
+
+      usedLengths[barIndex] = nextUsed;
+      search(index + 1);
+      usedLengths[barIndex] = previousUsed;
+    }
+
+    usedLengths.add(cut);
+    search(index + 1);
+    usedLengths.removeLast();
+  }
+
+  search(0);
+  return best;
+}
+
+final class _SeededRandom {
+  _SeededRandom(this._state);
+
+  int _state;
+
+  int nextIntInRange(int min, int max) {
+    _state = (1664525 * _state + 1013904223) & 0x7fffffff;
+    final span = max - min + 1;
+    return min + (_state % span);
+  }
 }

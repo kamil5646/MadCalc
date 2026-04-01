@@ -15,8 +15,6 @@ class CutOptimizationException implements Exception {
 }
 
 class CutOptimizer {
-  static const int _exactSearchNodeLimit = 250000;
-
   OptimizationResult optimize({
     required List<CutItem> items,
     required CutSettings settings,
@@ -186,19 +184,10 @@ class CutOptimizer {
 
     final bars = List<_SearchBar>.generate(barCount, (_) => _SearchBar());
     final failedStates = <_SearchState>{};
-    var visitedNodes = 0;
-    var aborted = false;
-
     bool dfs(int cutIndex) {
       if (cutIndex == cuts.length) {
         return true;
       }
-
-      if (visitedNodes >= _exactSearchNodeLimit) {
-        aborted = true;
-        return false;
-      }
-      visitedNodes++;
 
       final remainingCapacity = (barCount * adjustedCapacity) -
           bars.fold<int>(0, (sum, bar) => sum + bar.adjustedUsed);
@@ -249,23 +238,17 @@ class CutOptimizer {
 
         bars[index].cuts.removeLast();
         bars[index].adjustedUsed -= adjustedWeight;
-
-        if (aborted) {
-          return false;
-        }
         if (previousLoad == 0) {
           break;
         }
       }
 
-      if (!aborted) {
-        failedStates.add(state);
-      }
+      failedStates.add(state);
 
       return false;
     }
 
-    if (!dfs(0) || aborted) {
+    if (!dfs(0)) {
       return null;
     }
 
