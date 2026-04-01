@@ -1,0 +1,424 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00ECF7DE0A48E58A4FDC0BD4 /* StatePersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17014C8B2C959482B20B894E /* StatePersistence.swift */; };
+		033DB9BEF281A8D90766EDD6 /* BarPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1425D425AA28BCDF4B0BCF2 /* BarPlan.swift */; };
+		1751CDE3090277D903FC14FA /* MeasurementUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92966914D627B2DDF5ADE924 /* MeasurementUnit.swift */; };
+		653C78F3ADCAB52DAFB6733C /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48D553C2ACE8D551733F4151 /* ShareSheet.swift */; };
+		66E482431376642342B2B851 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7147A92CAFE31AD98BE6EC6B /* ContentView.swift */; };
+		756956AF3936ACF426DEEA47 /* OptimizationResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E0F637413EB0D0DE9719EC /* OptimizationResult.swift */; };
+		776E52EBE7A438C0FAFD21F3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A76CBFD9ACDF613196722994 /* Assets.xcassets */; };
+		9A03CCBA637E111871E38500 /* MadCalcApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4721D7591CE1885C90AA2C40 /* MadCalcApp.swift */; };
+		A62091A73EE1CEDCAFC1A332 /* MadCalcViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 624C712BBBF070DE9EB1E15A /* MadCalcViewModel.swift */; };
+		C3C87D4EB11EBD261502A998 /* CutSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F45DE4703CD0C4D8E2461E04 /* CutSettings.swift */; };
+		C3F0D91ABEFE1283A21785CF /* ShareFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 791749B9A50A954D666C7DF0 /* ShareFile.swift */; };
+		D91E84DD94BDB9D66A36A775 /* CutOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F014475800CB7F129EF0F172 /* CutOptimizer.swift */; };
+		D9FD08A878D135F8824EFFF5 /* AlertState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5658FB792FCDED2CA2E6850D /* AlertState.swift */; };
+		F8484FD2B1887420A4D8BA25 /* CutItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313D3F0D9874FB9326CC21E1 /* CutItem.swift */; };
+		FE48F7829FE8E99F4505B8D5 /* PDFReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D00EFEB4F2BF95094DBD83 /* PDFReportBuilder.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		10DC87F7BC39C0B12DF016AF /* MadCalc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MadCalc.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		17014C8B2C959482B20B894E /* StatePersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatePersistence.swift; sourceTree = "<group>"; };
+		313D3F0D9874FB9326CC21E1 /* CutItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CutItem.swift; sourceTree = "<group>"; };
+		32D00EFEB4F2BF95094DBD83 /* PDFReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFReportBuilder.swift; sourceTree = "<group>"; };
+		4721D7591CE1885C90AA2C40 /* MadCalcApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MadCalcApp.swift; sourceTree = "<group>"; };
+		48D553C2ACE8D551733F4151 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		5658FB792FCDED2CA2E6850D /* AlertState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertState.swift; sourceTree = "<group>"; };
+		624C712BBBF070DE9EB1E15A /* MadCalcViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MadCalcViewModel.swift; sourceTree = "<group>"; };
+		7147A92CAFE31AD98BE6EC6B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		73E0F637413EB0D0DE9719EC /* OptimizationResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimizationResult.swift; sourceTree = "<group>"; };
+		791749B9A50A954D666C7DF0 /* ShareFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareFile.swift; sourceTree = "<group>"; };
+		92966914D627B2DDF5ADE924 /* MeasurementUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementUnit.swift; sourceTree = "<group>"; };
+		A76CBFD9ACDF613196722994 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C1425D425AA28BCDF4B0BCF2 /* BarPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarPlan.swift; sourceTree = "<group>"; };
+		F014475800CB7F129EF0F172 /* CutOptimizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CutOptimizer.swift; sourceTree = "<group>"; };
+		F45DE4703CD0C4D8E2461E04 /* CutSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CutSettings.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		16FE64896AA16579D44D376A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A76CBFD9ACDF613196722994 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		3A54E9EF3EB3F87CCA42040A /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				5658FB792FCDED2CA2E6850D /* AlertState.swift */,
+				C1425D425AA28BCDF4B0BCF2 /* BarPlan.swift */,
+				313D3F0D9874FB9326CC21E1 /* CutItem.swift */,
+				F45DE4703CD0C4D8E2461E04 /* CutSettings.swift */,
+				92966914D627B2DDF5ADE924 /* MeasurementUnit.swift */,
+				73E0F637413EB0D0DE9719EC /* OptimizationResult.swift */,
+				791749B9A50A954D666C7DF0 /* ShareFile.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		56ABF0F2BC7E3B1343CD0B7E /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				915BC2B09DC22CE97A92DAA1 /* App */,
+				3A54E9EF3EB3F87CCA42040A /* Models */,
+				8FA8D8AA14A2C49EA66BE2E8 /* Services */,
+				57072F2A67B53647AE476C65 /* ViewModels */,
+				D1516DE4B26DEB6FA68A514D /* Views */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		57072F2A67B53647AE476C65 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				624C712BBBF070DE9EB1E15A /* MadCalcViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		8FA8D8AA14A2C49EA66BE2E8 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F014475800CB7F129EF0F172 /* CutOptimizer.swift */,
+				32D00EFEB4F2BF95094DBD83 /* PDFReportBuilder.swift */,
+				17014C8B2C959482B20B894E /* StatePersistence.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		915BC2B09DC22CE97A92DAA1 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				4721D7591CE1885C90AA2C40 /* MadCalcApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		D010ACC027FEFB09275F935F = {
+			isa = PBXGroup;
+			children = (
+				16FE64896AA16579D44D376A /* Resources */,
+				56ABF0F2BC7E3B1343CD0B7E /* Sources */,
+				F97D1B58CF455BD7F4283548 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D1516DE4B26DEB6FA68A514D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				7147A92CAFE31AD98BE6EC6B /* ContentView.swift */,
+				48D553C2ACE8D551733F4151 /* ShareSheet.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F97D1B58CF455BD7F4283548 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				10DC87F7BC39C0B12DF016AF /* MadCalc.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FB7D13E59A55B3C0142B6249 /* MadCalc */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8D10014A7325EA428302F54E /* Build configuration list for PBXNativeTarget "MadCalc" */;
+			buildPhases = (
+				F86394CAE594A4720D12DF71 /* Sources */,
+				D1ED402CC4D9163CD8DF56F6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MadCalc;
+			packageProductDependencies = (
+			);
+			productName = MadCalc;
+			productReference = 10DC87F7BC39C0B12DF016AF /* MadCalc.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		39A4AE6D55FEFE57B2F6CB2F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					FB7D13E59A55B3C0142B6249 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 49802927D9C8FCA254999209 /* Build configuration list for PBXProject "MadCalc_iOS" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = D010ACC027FEFB09275F935F;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F97D1B58CF455BD7F4283548 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FB7D13E59A55B3C0142B6249 /* MadCalc */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D1ED402CC4D9163CD8DF56F6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				776E52EBE7A438C0FAFD21F3 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F86394CAE594A4720D12DF71 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D9FD08A878D135F8824EFFF5 /* AlertState.swift in Sources */,
+				033DB9BEF281A8D90766EDD6 /* BarPlan.swift in Sources */,
+				66E482431376642342B2B851 /* ContentView.swift in Sources */,
+				F8484FD2B1887420A4D8BA25 /* CutItem.swift in Sources */,
+				D91E84DD94BDB9D66A36A775 /* CutOptimizer.swift in Sources */,
+				C3C87D4EB11EBD261502A998 /* CutSettings.swift in Sources */,
+				9A03CCBA637E111871E38500 /* MadCalcApp.swift in Sources */,
+				A62091A73EE1CEDCAFC1A332 /* MadCalcViewModel.swift in Sources */,
+				1751CDE3090277D903FC14FA /* MeasurementUnit.swift in Sources */,
+				756956AF3936ACF426DEEA47 /* OptimizationResult.swift in Sources */,
+				FE48F7829FE8E99F4505B8D5 /* PDFReportBuilder.swift in Sources */,
+				C3F0D91ABEFE1283A21785CF /* ShareFile.swift in Sources */,
+				653C78F3ADCAB52DAFB6733C /* ShareSheet.swift in Sources */,
+				00ECF7DE0A48E58A4FDC0BD4 /* StatePersistence.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2A58835835ACA4DD01DF212E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = P3QLTD589L;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MadCalc;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = NO;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.madmagsystem.MadCalcNative;
+				PRODUCT_NAME = MadCalc;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A29D967015E5EB2A64EE3955 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = P3QLTD589L;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MadCalc;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = NO;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.madmagsystem.MadCalcNative;
+				PRODUCT_NAME = MadCalc;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		CFBE474451422A5C3BBD1D0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D665D690EEC08E55E1EED7F3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		49802927D9C8FCA254999209 /* Build configuration list for PBXProject "MadCalc_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2A58835835ACA4DD01DF212E /* Debug */,
+				A29D967015E5EB2A64EE3955 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8D10014A7325EA428302F54E /* Build configuration list for PBXNativeTarget "MadCalc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CFBE474451422A5C3BBD1D0B /* Debug */,
+				D665D690EEC08E55E1EED7F3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 39A4AE6D55FEFE57B2F6CB2F /* Project object */;
+}
