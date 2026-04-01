@@ -57,7 +57,8 @@ jobs:
 
           $source = Join-Path $PWD "madcalc_desktop/build/windows/x64/runner/Release"
           $staging = Join-Path $env:RUNNER_TEMP "MadCalc-windows-$tag"
-          $zipPath = Join-Path $PWD "MadCalc-windows-$tag.zip"
+          $zipName = "MadCalc-windows-$tag.zip"
+          $zipPath = Join-Path $PWD $zipName
 
           if (Test-Path $staging) {
             Remove-Item $staging -Recurse -Force
@@ -72,9 +73,18 @@ jobs:
           Compress-Archive -Path $staging -DestinationPath $zipPath
 
           "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "WINDOWS_ZIP=$zipPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "WINDOWS_ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Upload asset to GitHub Release
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$RELEASE_TAG" "$WINDOWS_ZIP" --clobber --repo "${{ github.repository }}"
+        run: |
+          Set-Location $env:GITHUB_WORKSPACE
+
+          $asset = ".\\$env:WINDOWS_ZIP_NAME"
+          if (-not (Test-Path $asset)) {
+            throw "Missing asset: $asset"
+          }
+
+          gh release upload $env:RELEASE_TAG $asset --clobber --repo "${{ github.repository }}"
