@@ -227,15 +227,14 @@ final class MadCalcViewModel: ObservableObject {
       }
 
       do {
-        let url = try await Task.detached(priority: .userInitiated) {
-          try PDFReportBuilder().makeTemporaryReportURL(
-            items: snapshotItems,
-            settings: generatedSettings,
-            result: result,
-            unit: snapshotUnit,
-            generatedAt: generatedAt
-          )
-        }.value
+        await Task.yield()
+        let url = try PDFReportBuilder().makeTemporaryReportURL(
+          items: snapshotItems,
+          settings: generatedSettings,
+          result: result,
+          unit: snapshotUnit,
+          generatedAt: generatedAt
+        )
 
         shareFile = ShareFile(url: url)
       } catch {

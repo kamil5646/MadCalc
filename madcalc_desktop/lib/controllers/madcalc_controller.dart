@@ -311,7 +311,7 @@ class MadCalcController extends ChangeNotifier {
           'unit': unit.name,
           'generatedAt': currentGeneratedAt.toIso8601String(),
         },
-      );
+      ).timeout(const Duration(seconds: 20));
       final path = location.path.toLowerCase().endsWith('.pdf')
           ? location.path
           : '${location.path}.pdf';
@@ -319,6 +319,8 @@ class MadCalcController extends ChangeNotifier {
       await file.writeAsBytes(data, flush: true);
       lastExportPath = path;
       return 'PDF zapisany w: $path';
+    } on TimeoutException {
+      return 'Tworzenie PDF trwało zbyt długo. Spróbuj skrócić raport i ponowić eksport.';
     } catch (_) {
       return 'Nie udało się zapisać raportu PDF.';
     } finally {
