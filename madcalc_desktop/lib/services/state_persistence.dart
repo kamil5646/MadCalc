@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/calculation_history_entry.dart';
 import '../models/cut_item.dart';
 import '../models/cut_settings.dart';
 import '../models/measurement_unit.dart';
@@ -16,6 +17,8 @@ class PersistedState {
     required this.result,
     required this.generatedSettings,
     required this.generatedAt,
+    required this.historyEntries,
+    required this.activeHistoryEntryId,
   });
 
   final MeasurementUnit unit;
@@ -25,6 +28,8 @@ class PersistedState {
   final OptimizationResult? result;
   final CutSettings? generatedSettings;
   final DateTime? generatedAt;
+  final List<CalculationHistoryEntry> historyEntries;
+  final String? activeHistoryEntryId;
 
   Map<String, dynamic> toJson() {
     return {
@@ -35,6 +40,8 @@ class PersistedState {
       'result': result?.toJson(),
       'generatedSettings': generatedSettings?.toJson(),
       'generatedAt': generatedAt?.toIso8601String(),
+      'historyEntries': historyEntries.map((entry) => entry.toJson()).toList(),
+      'activeHistoryEntryId': activeHistoryEntryId,
     };
   }
 
@@ -42,7 +49,9 @@ class PersistedState {
     return PersistedState(
       unit: MeasurementUnit.fromRaw(json['unit'] as String? ?? ''),
       items: (json['items'] as List<dynamic>? ?? [])
-          .map((item) => CutItem.fromJson(Map<String, dynamic>.from(item as Map)))
+          .map(
+            (item) => CutItem.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
           .toList(),
       stockLengthMm: json['stockLengthMm'] as int? ?? 6000,
       sawThicknessMm: json['sawThicknessMm'] as int? ?? 3,
@@ -59,6 +68,14 @@ class PersistedState {
       generatedAt: json['generatedAt'] == null
           ? null
           : DateTime.tryParse(json['generatedAt'] as String),
+      historyEntries: (json['historyEntries'] as List<dynamic>? ?? [])
+          .map(
+            (entry) => CalculationHistoryEntry.fromJson(
+              Map<String, dynamic>.from(entry as Map),
+            ),
+          )
+          .toList(),
+      activeHistoryEntryId: json['activeHistoryEntryId'] as String?,
     );
   }
 }

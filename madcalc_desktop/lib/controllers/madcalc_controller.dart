@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/app_update_info.dart';
 import '../models/bar_plan.dart';
+import '../models/calculation_history_entry.dart';
 import '../models/cut_item.dart';
 import '../models/cut_settings.dart';
 import '../models/measurement_unit.dart';
@@ -50,9 +51,13 @@ class MadCalcController extends ChangeNotifier {
   String? lastExportPath;
   String? currentVersion;
   AppUpdateInfo? availableUpdate;
+  List<CalculationHistoryEntry> historyEntries = <CalculationHistoryEntry>[];
 
   String? _editingItemId;
   bool _runtimeInitialized = false;
+  String? _activeHistoryEntryId;
+
+  static const _historyLimit = 12;
 
   bool get isEditingItem => _editingItemId != null;
 
@@ -90,6 +95,8 @@ class MadCalcController extends ChangeNotifier {
         !isPrinting;
   }
 
+  bool get hasHistory => historyEntries.isNotEmpty;
+
   String get versionBadgeLabel {
     final version = currentVersion;
     if (version == null || version.isEmpty) {
@@ -114,6 +121,12 @@ class MadCalcController extends ChangeNotifier {
       result = persisted.result;
       generatedSettings = persisted.generatedSettings;
       generatedAt = persisted.generatedAt;
+      historyEntries = persisted.historyEntries;
+      _activeHistoryEntryId = persisted.activeHistoryEntryId;
+      if (_activeHistoryEntryId != null &&
+          !historyEntries.any((entry) => entry.id == _activeHistoryEntryId)) {
+        _activeHistoryEntryId = null;
+      }
     }
   }
 
@@ -239,6 +252,7 @@ class MadCalcController extends ChangeNotifier {
       to: nextUnit,
     );
     unit = nextUnit;
+    _syncActiveHistoryEntryWithCurrentState();
     _persistLater();
     notifyListeners();
   }
@@ -313,6 +327,7 @@ class MadCalcController extends ChangeNotifier {
     generatedAt = null;
     lastExportPath = null;
     _editingItemId = null;
+    _activeHistoryEntryId = null;
     _persistLater();
     notifyListeners();
   }
@@ -373,6 +388,7 @@ class MadCalcController extends ChangeNotifier {
       generatedSettings = settings;
       generatedAt = DateTime.now();
       lastExportPath = null;
+      _saveCurrentCalculationToHistory();
       _persistLater();
       return null;
     } on CutOptimizationException catch (error) {
@@ -479,12 +495,63 @@ class MadCalcController extends ChangeNotifier {
     final updatedBars = [...currentResult.bars];
     updatedBars[index] = updatedBars[index].copyWith(name: value);
     result = currentResult.copyWith(bars: updatedBars);
+    _syncActiveHistoryEntryWithCurrentState();
     _persistLater();
     notifyListeners();
   }
 
   String displayName(BarPlan bar) {
     return bar.displayName;
+  }
+
+  void loadHistoryEntry(CalculationHistoryEntry entry) {
+    unit = entry.unit;
+    items = [...entry.items];
+    stockLengthInput = unit.format(
+      entry.settings.stockLengthMm,
+      includeUnit: false,
+    );
+    sawThicknessInput = unit.format(
+      entry.settings.sawThicknessMm,
+      includeUnit: false,
+    );
+    result = entry.result;
+    generatedSettings = entry.settings;
+    generatedAt = entry.generatedAt;
+    lastExportPath = null;
+    _editingItemId = null;
+    itemLengthInput = '';
+    itemQuantityInput = '1';
+    _activeHistoryEntryId = entry.id;
+    _persistLater();
+    notifyListeners();
+  }
+
+  void deleteHistoryEntry(CalculationHistoryEntry entry) {
+    historyEntries = historyEntries
+        .where((existing) => existing.id != entry.id)
+        .toList(growable: false);
+    if (_activeHistoryEntryId == entry.id) {
+      _activeHistoryEntryId = null;
+    }
+    _persistLater();
+    notifyListeners();
+  }
+
+  void clearHistory() {
+    historyEntries = <CalculationHistoryEntry>[];
+    _activeHistoryEntryId = null;
+    _persistLater();
+    notifyListeners();
+  }
+
+  String formatHistoryTimestamp(DateTime value) {
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final year = value.year.toString();
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '$day.$month.$year $hour:$minute';
   }
 
   String? _readableSettingsError() {
@@ -525,6 +592,7 @@ class MadCalcController extends ChangeNotifier {
     generatedSettings = null;
     generatedAt = null;
     lastExportPath = null;
+    _activeHistoryEntryId = null;
   }
 
   void _persistLater() {
@@ -540,6 +608,8 @@ class MadCalcController extends ChangeNotifier {
           result: result,
           generatedSettings: generatedSettings,
           generatedAt: generatedAt,
+          historyEntries: historyEntries,
+          activeHistoryEntryId: _activeHistoryEntryId,
         ),
       ),
     );
@@ -617,6 +687,83 @@ class MadCalcController extends ChangeNotifier {
   }
 
   int _idSeed = 0;
+
+  void _saveCurrentCalculationToHistory() {
+    final snapshot = _historySnapshot();
+    if (snapshot == null) {
+      return;
+    }
+
+    final historyEntryId = _activeHistoryEntryId ?? _nextHistoryId();
+    _activeHistoryEntryId = historyEntryId;
+    _upsertHistoryEntry(
+      CalculationHistoryEntry(
+        id: historyEntryId,
+        savedAt: DateTime.now(),
+        unit: snapshot.unit,
+        items: snapshot.items,
+        settings: snapshot.settings,
+        result: snapshot.result,
+        generatedAt: snapshot.generatedAt,
+      ),
+    );
+  }
+
+  void _syncActiveHistoryEntryWithCurrentState() {
+    if (_activeHistoryEntryId == null) {
+      return;
+    }
+
+    final snapshot = _historySnapshot();
+    if (snapshot == null) {
+      return;
+    }
+
+    _upsertHistoryEntry(
+      CalculationHistoryEntry(
+        id: _activeHistoryEntryId!,
+        savedAt: DateTime.now(),
+        unit: snapshot.unit,
+        items: snapshot.items,
+        settings: snapshot.settings,
+        result: snapshot.result,
+        generatedAt: snapshot.generatedAt,
+      ),
+    );
+  }
+
+  void _upsertHistoryEntry(CalculationHistoryEntry entry) {
+    final updated = <CalculationHistoryEntry>[entry];
+    updated.addAll(
+      historyEntries
+          .where((existing) => existing.id != entry.id)
+          .take(_historyLimit - 1),
+    );
+    historyEntries = updated;
+  }
+
+  _HistorySnapshot? _historySnapshot() {
+    final currentResult = result;
+    final currentSettings = generatedSettings;
+    final currentGeneratedAt = generatedAt;
+    if (currentResult == null ||
+        currentSettings == null ||
+        currentGeneratedAt == null) {
+      return null;
+    }
+
+    return _HistorySnapshot(
+      unit: unit,
+      items: List<CutItem>.from(items),
+      settings: currentSettings,
+      result: currentResult,
+      generatedAt: currentGeneratedAt,
+    );
+  }
+
+  String _nextHistoryId() {
+    return 'history-${DateTime.now().microsecondsSinceEpoch}';
+  }
 }
 
 class _PdfSnapshot {
@@ -632,5 +779,21 @@ class _PdfSnapshot {
   final CutSettings settings;
   final OptimizationResult result;
   final MeasurementUnit unit;
+  final DateTime generatedAt;
+}
+
+class _HistorySnapshot {
+  const _HistorySnapshot({
+    required this.unit,
+    required this.items,
+    required this.settings,
+    required this.result,
+    required this.generatedAt,
+  });
+
+  final MeasurementUnit unit;
+  final List<CutItem> items;
+  final CutSettings settings;
+  final OptimizationResult result;
   final DateTime generatedAt;
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../controllers/madcalc_controller.dart';
 import '../models/app_update_info.dart';
 import '../models/bar_plan.dart';
+import '../models/calculation_history_entry.dart';
 import '../models/cut_item.dart';
 import '../models/measurement_unit.dart';
 
@@ -476,6 +477,48 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
         ),
+        const SizedBox(height: 24),
+        _Panel(
+          title: 'Historia',
+          subtitle:
+              'Każde wygenerowane wyliczenie zapisujemy lokalnie. Możesz je później wczytać albo usunąć.',
+          child: controller.historyEntries.isEmpty
+              ? const _EmptyState(
+                  icon: Icons.history_rounded,
+                  title: 'Brak zapisanych wyliczeń',
+                  message:
+                      'Wygeneruj pierwszy plan, a pojawi się tutaj w historii lokalnej.',
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: controller.clearHistory,
+                        icon: const Icon(Icons.delete_sweep_rounded),
+                        label: const Text('Wyczyść historię'),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    for (
+                      var index = 0;
+                      index < controller.historyEntries.length;
+                      index++
+                    ) ...[
+                      _HistoryEntryRow(
+                        entry: controller.historyEntries[index],
+                        controller: controller,
+                      ),
+                      if (index < controller.historyEntries.length - 1)
+                        Divider(
+                          height: 24,
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                    ],
+                  ],
+                ),
+        ),
       ],
     );
   }
@@ -900,6 +943,61 @@ class _ItemRow extends StatelessWidget {
         IconButton(
           tooltip: 'Usuń',
           onPressed: () => controller.deleteItem(item),
+          icon: const Icon(Icons.delete_outline_rounded),
+        ),
+      ],
+    );
+  }
+}
+
+class _HistoryEntryRow extends StatelessWidget {
+  const _HistoryEntryRow({required this.entry, required this.controller});
+
+  final CalculationHistoryEntry entry;
+  final MadCalcController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                controller.formatHistoryTimestamp(entry.savedAt),
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${entry.result.barCount} sztang • ${entry.totalPieces} szt. • sztanga ${controller.formatLength(entry.settings.stockLengthMm)}',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Odpad ${controller.formatLength(entry.result.totalWasteMm)} • wykorzystanie ${controller.formatPercent(entry.result.utilizationPercent)}%',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        TextButton(
+          onPressed: () => controller.loadHistoryEntry(entry),
+          child: const Text('Wczytaj'),
+        ),
+        IconButton(
+          tooltip: 'Usuń z historii',
+          onPressed: () => controller.deleteHistoryEntry(entry),
           icon: const Icon(Icons.delete_outline_rounded),
         ),
       ],

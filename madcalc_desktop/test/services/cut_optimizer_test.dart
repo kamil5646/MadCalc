@@ -69,25 +69,28 @@ void main() {
       );
     });
 
-    test('finds a better packing than the old greedy case with saw thickness', () {
-      final optimizer = CutOptimizer();
+    test(
+      'finds a better packing than the old greedy case with saw thickness',
+      () {
+        final optimizer = CutOptimizer();
 
-      final result = optimizer.optimize(
-        items: [
-          CutItem(id: 'a', lengthMm: 70, quantity: 2),
-          CutItem(id: 'b', lengthMm: 60, quantity: 1),
-          CutItem(id: 'c', lengthMm: 25, quantity: 1),
-          CutItem(id: 'd', lengthMm: 15, quantity: 1),
-          CutItem(id: 'e', lengthMm: 10, quantity: 1),
-        ],
-        settings: const CutSettings(stockLengthMm: 90, sawThicknessMm: 1),
-      );
+        final result = optimizer.optimize(
+          items: [
+            CutItem(id: 'a', lengthMm: 70, quantity: 2),
+            CutItem(id: 'b', lengthMm: 60, quantity: 1),
+            CutItem(id: 'c', lengthMm: 25, quantity: 1),
+            CutItem(id: 'd', lengthMm: 15, quantity: 1),
+            CutItem(id: 'e', lengthMm: 10, quantity: 1),
+          ],
+          settings: const CutSettings(stockLengthMm: 90, sawThicknessMm: 1),
+        );
 
-      expect(result.barCount, 3);
-      for (final bar in result.bars) {
-        expect(bar.usedLengthMm <= 90, isTrue);
-      }
-    });
+        expect(result.barCount, 3);
+        for (final bar in result.bars) {
+          expect(bar.usedLengthMm <= 90, isTrue);
+        }
+      },
+    );
 
     test('stays deterministic for the same input', () {
       final optimizer = CutOptimizer();
@@ -107,6 +110,34 @@ void main() {
         equals(first.bars.map((bar) => bar.cutsMm).toList()),
       );
     });
+
+    test('improves scrap usage when bar count is already minimal', () {
+      final optimizer = CutOptimizer();
+
+      final result = optimizer.optimize(
+        items: [
+          CutItem(id: 'a', lengthMm: 70, quantity: 1),
+          CutItem(id: 'b', lengthMm: 60, quantity: 1),
+          CutItem(id: 'c', lengthMm: 15, quantity: 1),
+          CutItem(id: 'd', lengthMm: 10, quantity: 2),
+        ],
+        settings: const CutSettings(stockLengthMm: 80, sawThicknessMm: 0),
+      );
+
+      expect(result.barCount, 3);
+      expect(
+        result.bars.map((bar) => bar.cutsMm).toList(),
+        equals([
+          [70, 10],
+          [60, 15],
+          [10],
+        ]),
+      );
+      expect(
+        result.bars.map((bar) => bar.usedLengthMm).toList(),
+        equals([80, 75, 10]),
+      );
+    });
   });
 }
 
@@ -116,14 +147,11 @@ List<CutItem> _groupedItems(List<int> cuts) {
     grouped.update(cut, (count) => count + 1, ifAbsent: () => 1);
   }
 
-  final lengths = grouped.keys.toList()..sort((left, right) => right.compareTo(left));
+  final lengths = grouped.keys.toList()
+    ..sort((left, right) => right.compareTo(left));
   return [
     for (final length in lengths)
-      CutItem(
-        id: 'cut-$length',
-        lengthMm: length,
-        quantity: grouped[length]!,
-      ),
+      CutItem(id: 'cut-$length', lengthMm: length, quantity: grouped[length]!),
   ];
 }
 
@@ -155,8 +183,9 @@ int _minimumBarCountByBruteForce({
         continue;
       }
 
-      final nextUsed =
-          previousUsed == 0 ? cut : previousUsed + sawThicknessMm + cut;
+      final nextUsed = previousUsed == 0
+          ? cut
+          : previousUsed + sawThicknessMm + cut;
       if (nextUsed > stockLengthMm) {
         continue;
       }
