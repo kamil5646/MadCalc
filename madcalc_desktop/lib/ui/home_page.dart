@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../controllers/madcalc_controller.dart';
+import '../models/app_update_info.dart';
 import '../models/bar_plan.dart';
 import '../models/cut_item.dart';
 import '../models/measurement_unit.dart';
@@ -39,6 +42,9 @@ class _HomePageState extends State<HomePage> {
     );
     _itemLengthFocusNode = FocusNode();
     _itemQuantityFocusNode = FocusNode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(widget.controller.initializeRuntimeServices());
+    });
   }
 
   @override
@@ -84,6 +90,38 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: IconButton.filledTonal(
+                  tooltip: controller.availableUpdate != null
+                      ? 'Pobierz aktualizację'
+                      : 'Sprawdź aktualizacje',
+                  onPressed:
+                      controller.isCheckingUpdates || controller.isOpeningUpdate
+                      ? null
+                      : () {
+                          if (controller.availableUpdate != null) {
+                            unawaited(_handleOpenUpdate());
+                            return;
+                          }
+                          unawaited(_handleCheckUpdates());
+                        },
+                  icon:
+                      controller.isCheckingUpdates || controller.isOpeningUpdate
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          controller.availableUpdate != null
+                              ? Icons.system_update_alt_rounded
+                              : Icons.update_rounded,
+                        ),
+                ),
+              ),
+            ],
           ),
           body: Scrollbar(
             thumbVisibility: true,
@@ -96,6 +134,15 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _HeroPanel(controller: controller),
+                      if (controller.availableUpdate != null) ...[
+                        const SizedBox(height: 16),
+                        _UpdateBanner(
+                          update: controller.availableUpdate!,
+                          controller: controller,
+                          onPrimaryAction: _handleOpenUpdate,
+                          onSecondaryAction: _handleCheckUpdates,
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       LayoutBuilder(
                         builder: (context, constraints) {
@@ -491,6 +538,22 @@ class _HomePageState extends State<HomePage> {
     _showMessage(message);
   }
 
+  Future<void> _handleCheckUpdates() async {
+    final message = await widget.controller.checkForUpdates();
+    if (!mounted || message == null) {
+      return;
+    }
+    _showMessage(message);
+  }
+
+  Future<void> _handleOpenUpdate() async {
+    final message = await widget.controller.openAvailableUpdate();
+    if (!mounted || message == null) {
+      return;
+    }
+    _showMessage(message);
+  }
+
   void _showMessage(String message, {bool isError = false}) {
     final messenger = ScaffoldMessenger.of(context);
     messenger
@@ -548,7 +611,7 @@ class _HeroPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'MadCalc liczy plan cięcia bez internetu, pozwala nazwać każdą sztangę i zapisuje estetyczny PDF do wysłania dalej na macOS, Windows i Androidzie.',
+                    'MadCalc liczy plan cięcia bez internetu, pozwala nazwać każdą sztangę i sam sprawdza, czy na GitHub Releases czeka nowsza wersja dla macOS, Windows albo Androida.',
                     style: textTheme.titleMedium?.copyWith(
                       color: const Color(0xFFEFF5FB),
                       height: 1.4,
@@ -560,7 +623,7 @@ class _HeroPanel extends StatelessWidget {
             Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: const [
+              children: [
                 _HeroBadge(icon: Icons.cloud_off_rounded, label: 'Offline'),
                 _HeroBadge(icon: Icons.picture_as_pdf_rounded, label: 'PDF'),
                 _HeroBadge(
@@ -569,6 +632,10 @@ class _HeroPanel extends StatelessWidget {
                 ),
                 _HeroBadge(icon: Icons.laptop_mac_rounded, label: 'macOS'),
                 _HeroBadge(icon: Icons.android_rounded, label: 'Android'),
+                _HeroBadge(
+                  icon: Icons.sell_outlined,
+                  label: controller.versionBadgeLabel,
+                ),
               ],
             ),
           ],
@@ -610,6 +677,140 @@ class _HeroBadge extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _UpdateBanner extends StatelessWidget {
+  const _UpdateBanner({
+    required this.update,
+    required this.controller,
+    required this.onPrimaryAction,
+    required this.onSecondaryAction,
+  });
+
+  final AppUpdateInfo update;
+  final MadCalcController controller;
+  final Future<void> Function() onPrimaryAction;
+  final Future<void> Function() onSecondaryAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final notes = _compactReleaseNotes(update.releaseNotes);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        runSpacing: 16,
+        spacing: 16,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dostępna aktualizacja v${update.latestVersion}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Masz v${update.currentVersion}. MadCalc znalazł nowszy build dla ${update.platformLabel}.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onPrimaryContainer,
+                    height: 1.35,
+                  ),
+                ),
+                if (notes != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    notes,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onPrimaryContainer.withValues(
+                        alpha: 0.88,
+                      ),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+                if (update.assetName != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Plik: ${update.assetName}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onPrimaryContainer.withValues(
+                        alpha: 0.78,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                onPressed: controller.isOpeningUpdate
+                    ? null
+                    : () {
+                        unawaited(onPrimaryAction());
+                      },
+                icon: controller.isOpeningUpdate
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_rounded),
+                label: Text(update.primaryActionLabel),
+              ),
+              OutlinedButton.icon(
+                onPressed: controller.isCheckingUpdates
+                    ? null
+                    : () {
+                        unawaited(onSecondaryAction());
+                      },
+                icon: controller.isCheckingUpdates
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded),
+                label: const Text('Sprawdź ponownie'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _compactReleaseNotes(String rawNotes) {
+    final normalized = rawNotes
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .take(3)
+        .toList(growable: false);
+
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return normalized.join('  ');
   }
 }
 
