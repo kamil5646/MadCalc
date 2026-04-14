@@ -13,11 +13,12 @@ class CutOptimizationException implements Exception {
 }
 
 class CutOptimizer {
-  static const int _maxExactCutCount = 24;
   static const int _maxExactUniqueLengths = 8;
-  static const int _maxExactBarCount = 10;
+  static const int _maxExactBarCount = 12;
   static const int _maxVisitedStates = 60000;
   static const int _maxGeneratedPatterns = 180000;
+  static const int _maxLocalRepackCuts = 18;
+  static const int _maxLocalRepackBarsToInspect = 8;
 
   OptimizationResult optimize({
     required List<CutItem> items,
@@ -32,7 +33,8 @@ class CutOptimizer {
       settings: settings,
     );
     final exactPacking =
-        _shouldRunExactSearch(cuts: cuts, heuristicBars: heuristicBars)
+        minimumBarCount < heuristicBars.length &&
+            _shouldRunExactSearch(cuts: cuts, heuristicBars: heuristicBars)
         ? _findOptimalPacking(
             cuts: cuts,
             settings: settings,
@@ -121,10 +123,13 @@ class CutOptimizer {
     required List<int> cuts,
     required CutSettings settings,
   }) {
-    final packedCuts = _packCutsGreedy(
-      cuts: cuts,
+    final packedCuts = _improveGreedyPacking(
+      cutsByBar: _packCutsGreedy(
+        cuts: cuts,
+        settings: settings,
+        useLookahead: true,
+      ),
       settings: settings,
-      useLookahead: true,
     );
     return _buildBarPlans(cutsByBar: packedCuts, settings: settings);
   }
@@ -158,6 +163,264 @@ class CutOptimizer {
     }
 
     return bars;
+  }
+
+  List<List<int>> _improveGreedyPacking({
+    required List<List<int>> cutsByBar,
+    required CutSettings settings,
+  }) {
+    var current = _normalizePacking(cutsByBar: cutsByBar, settings: settings);
+
+    while (true) {
+      final reduced = _tryReduceBarCount(
+        cutsByBar: current,
+        settings: settings,
+      );
+      if (reduced == null) {
+        final locallyRepacked = _tryLocalRepack(
+          cutsByBar: current,
+          settings: settings,
+        );
+        if (locallyRepacked == null) {
+          return current;
+        }
+        current = _normalizePacking(
+          cutsByBar: locallyRepacked,
+          settings: settings,
+        );
+        continue;
+      }
+      current = _normalizePacking(cutsByBar: reduced, settings: settings);
+    }
+  }
+
+  List<List<int>>? _tryReduceBarCount({
+    required List<List<int>> cutsByBar,
+    required CutSettings settings,
+  }) {
+    final sourceIndices = List<int>.generate(cutsByBar.length, (index) => index)
+      ..sort((left, right) {
+        final leftUsed = _usedLength(cuts: cutsByBar[left], settings: settings);
+        final rightUsed = _usedLength(
+          cuts: cutsByBar[right],
+          settings: settings,
+        );
+        if (leftUsed != rightUsed) {
+          return leftUsed.compareTo(rightUsed);
+        }
+        return cutsByBar[left].length.compareTo(cutsByBar[right].length);
+      });
+
+    for (final sourceIndex in sourceIndices) {
+      final redistributed = _tryRedistributeBar(
+        cutsByBar: cutsByBar,
+        settings: settings,
+        sourceIndex: sourceIndex,
+      );
+      if (redistributed != null) {
+        return redistributed;
+      }
+    }
+
+    return null;
+  }
+
+  List<List<int>>? _tryLocalRepack({
+    required List<List<int>> cutsByBar,
+    required CutSettings settings,
+  }) {
+    if (cutsByBar.length < 2) {
+      return null;
+    }
+
+    final candidateIndices =
+        List<int>.generate(cutsByBar.length, (index) => index)
+          ..sort((left, right) {
+            final leftWaste =
+                settings.stockLengthMm -
+                _usedLength(cuts: cutsByBar[left], settings: settings);
+            final rightWaste =
+                settings.stockLengthMm -
+                _usedLength(cuts: cutsByBar[right], settings: settings);
+            if (leftWaste != rightWaste) {
+              return rightWaste.compareTo(leftWaste);
+            }
+            return cutsByBar[left].length.compareTo(cutsByBar[right].length);
+          });
+
+    final inspected = candidateIndices
+        .take(_maxLocalRepackBarsToInspect)
+        .toList(growable: false);
+
+    for (final subsetSize in [4, 3, 2]) {
+      if (inspected.length < subsetSize) {
+        continue;
+      }
+
+      for (final subset in _barIndexCombinations(inspected, subsetSize)) {
+        final subsetCuts = <int>[
+          for (final index in subset) ...cutsByBar[index],
+        ];
+        if (subsetCuts.length > _maxLocalRepackCuts) {
+          continue;
+        }
+
+        final lowerBound = _minimumPossibleBarCount(
+          cuts: subsetCuts,
+          settings: settings,
+        );
+        if (lowerBound >= subset.length) {
+          continue;
+        }
+
+        final upperBoundBars = [
+          for (var position = 0; position < subset.length; position++)
+            BarPlan(
+              barIndex: position + 1,
+              name: '',
+              cutsMm: [...cutsByBar[subset[position]]],
+              usedLengthMm: _usedLength(
+                cuts: cutsByBar[subset[position]],
+                settings: settings,
+              ),
+              wasteMm:
+                  settings.stockLengthMm -
+                  _usedLength(
+                    cuts: cutsByBar[subset[position]],
+                    settings: settings,
+                  ),
+            ),
+        ];
+
+        final repacked = _findOptimalPacking(
+          cuts: [...subsetCuts]..sort((left, right) => right.compareTo(left)),
+          settings: settings,
+          lowerBound: lowerBound,
+          upperBoundBars: upperBoundBars,
+        );
+
+        if (repacked == null || repacked.length >= subset.length) {
+          continue;
+        }
+
+        final remaining = <List<int>>[
+          for (var index = 0; index < cutsByBar.length; index++)
+            if (!subset.contains(index)) [...cutsByBar[index]],
+        ];
+        remaining.addAll(repacked);
+        return remaining;
+      }
+    }
+
+    return null;
+  }
+
+  Iterable<List<int>> _barIndexCombinations(List<int> indices, int size) sync* {
+    final current = <int>[];
+
+    Iterable<List<int>> walk(int startIndex) sync* {
+      if (current.length == size) {
+        yield List<int>.from(current);
+        return;
+      }
+
+      for (var index = startIndex; index < indices.length; index++) {
+        current.add(indices[index]);
+        yield* walk(index + 1);
+        current.removeLast();
+      }
+    }
+
+    yield* walk(0);
+  }
+
+  List<List<int>>? _tryRedistributeBar({
+    required List<List<int>> cutsByBar,
+    required CutSettings settings,
+    required int sourceIndex,
+  }) {
+    final sourceCuts = [...cutsByBar[sourceIndex]]
+      ..sort((left, right) => right.compareTo(left));
+    if (sourceCuts.isEmpty) {
+      return null;
+    }
+
+    final targetBars = <List<int>>[];
+    final targetUsed = <int>[];
+    for (var index = 0; index < cutsByBar.length; index++) {
+      if (index == sourceIndex) {
+        continue;
+      }
+      final cuts = [...cutsByBar[index]];
+      targetBars.add(cuts);
+      targetUsed.add(_usedLength(cuts: cuts, settings: settings));
+    }
+
+    bool assign(int cutIndex) {
+      if (cutIndex >= sourceCuts.length) {
+        return true;
+      }
+
+      final cut = sourceCuts[cutIndex];
+      final options = <_RedistributionOption>[];
+      final seenLoads = <int>{};
+
+      for (
+        var targetIndex = 0;
+        targetIndex < targetBars.length;
+        targetIndex++
+      ) {
+        final usedBefore = targetUsed[targetIndex];
+        if (!seenLoads.add(usedBefore)) {
+          continue;
+        }
+
+        final usedAfter = usedBefore + settings.sawThicknessMm + cut;
+        if (usedAfter > settings.stockLengthMm) {
+          continue;
+        }
+
+        options.add(
+          _RedistributionOption(
+            targetIndex: targetIndex,
+            remainingCapacity: settings.stockLengthMm - usedAfter,
+          ),
+        );
+      }
+
+      options.sort((left, right) {
+        if (left.remainingCapacity != right.remainingCapacity) {
+          return left.remainingCapacity.compareTo(right.remainingCapacity);
+        }
+        return targetBars[left.targetIndex].length.compareTo(
+          targetBars[right.targetIndex].length,
+        );
+      });
+
+      for (final option in options) {
+        final targetIndex = option.targetIndex;
+        targetBars[targetIndex].add(cut);
+        targetUsed[targetIndex] += settings.sawThicknessMm + cut;
+
+        if (assign(cutIndex + 1)) {
+          return true;
+        }
+
+        targetBars[targetIndex].removeLast();
+        targetUsed[targetIndex] -= settings.sawThicknessMm + cut;
+      }
+
+      return false;
+    }
+
+    if (!assign(0)) {
+      return null;
+    }
+
+    return [
+      for (var index = 0; index < targetBars.length; index++)
+        [...targetBars[index]]..sort((left, right) => right.compareTo(left)),
+    ];
   }
 
   _BarSelection _findSmartCombination({
@@ -215,6 +478,11 @@ class CutOptimizer {
     required int lowerBound,
     required List<BarPlan> upperBoundBars,
   }) {
+    final upperBoundBarCount = upperBoundBars.length;
+    if (lowerBound >= upperBoundBarCount) {
+      return null;
+    }
+
     final adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm;
     final groupedCuts = <int, int>{};
     for (final cut in cuts) {
@@ -227,16 +495,9 @@ class CutOptimizer {
       for (final length in lengths) length + settings.sawThicknessMm,
     ];
 
-    final initialPacking = _normalizePacking(
-      cutsByBar: [for (final bar in upperBoundBars) bar.cutsMm],
-      settings: settings,
-    );
-    var bestBarCount = upperBoundBars.length;
-    var bestPacking = initialPacking;
-
     final currentPatterns = <_BarPattern>[];
     final patternCache = <_PatternState, List<_BarPattern>>{};
-    final bestBarsUsedForState = <_PatternState, int>{};
+    final exactCache = <_ExactSearchState, List<_BarPattern>?>{};
     var visitedStates = 0;
     var generatedPatterns = 0;
 
@@ -366,43 +627,29 @@ class CutOptimizer {
       return generated;
     }
 
-    void search(_PatternState state, int barsUsed) {
+    List<_BarPattern>? searchExact(_PatternState state, int barsLeft) {
       visitedStates++;
       guardBudget();
-      if (barsUsed > bestBarCount) {
-        return;
-      }
 
       if (!state.remainingCounts.any((count) => count > 0)) {
-        final candidatePacking = _normalizePacking(
-          cutsByBar: [
-            for (final pattern in currentPatterns) expandPattern(pattern),
-          ],
-          settings: settings,
-        );
-        if (barsUsed < bestBarCount ||
-            _isBetterPacking(
-              candidate: candidatePacking,
-              current: bestPacking,
-              settings: settings,
-            )) {
-          bestBarCount = barsUsed;
-          bestPacking = candidatePacking;
-        }
-        return;
+        return const <_BarPattern>[];
+      }
+      if (barsLeft == 0) {
+        return null;
       }
 
       final stateLowerBound = lowerBoundFor(state.remainingCounts);
-      if (barsUsed + stateLowerBound > bestBarCount) {
-        return;
+      if (stateLowerBound > barsLeft) {
+        return null;
       }
 
-      final bestSeen = bestBarsUsedForState[state];
-      if (bestSeen != null && bestSeen < barsUsed) {
-        return;
-      }
-      if (bestSeen == null || barsUsed < bestSeen) {
-        bestBarsUsedForState[state] = barsUsed;
+      final cacheKey = _ExactSearchState(
+        remainingCounts: state.remainingCounts,
+        barsLeft: barsLeft,
+      );
+      final cached = exactCache[cacheKey];
+      if (cached != null || exactCache.containsKey(cacheKey)) {
+        return cached;
       }
 
       for (final pattern in patternsFor(state)) {
@@ -412,23 +659,41 @@ class CutOptimizer {
         }
 
         currentPatterns.add(pattern);
-        search(_PatternState(nextCounts), barsUsed + 1);
+        final completion = searchExact(_PatternState(nextCounts), barsLeft - 1);
         currentPatterns.removeLast();
+        if (completion != null) {
+          final solution = <_BarPattern>[pattern, ...completion];
+          exactCache[cacheKey] = solution;
+          return solution;
+        }
       }
+
+      exactCache[cacheKey] = null;
+      return null;
     }
 
     try {
-      search(_PatternState(initialCounts), 0);
+      for (
+        var targetBarCount = lowerBound;
+        targetBarCount < upperBoundBarCount;
+        targetBarCount++
+      ) {
+        exactCache.clear();
+        final solution = searchExact(
+          _PatternState(initialCounts),
+          targetBarCount,
+        );
+        if (solution == null) {
+          continue;
+        }
+
+        return _normalizePacking(
+          cutsByBar: [for (final pattern in solution) expandPattern(pattern)],
+          settings: settings,
+        );
+      }
     } on _SearchBudgetExceeded {
       // Zwracamy najlepszy dotąd układ albo bezpiecznie spadamy do heurystyki.
-    }
-    if (bestBarCount < upperBoundBars.length ||
-        _isBetterPacking(
-          candidate: bestPacking,
-          current: initialPacking,
-          settings: settings,
-        )) {
-      return bestPacking;
     }
     return null;
   }
@@ -437,9 +702,6 @@ class CutOptimizer {
     required List<int> cuts,
     required List<BarPlan> heuristicBars,
   }) {
-    if (cuts.length > _maxExactCutCount) {
-      return false;
-    }
     if (heuristicBars.length > _maxExactBarCount) {
       return false;
     }
@@ -702,6 +964,16 @@ class _ScoredSelection {
   final List<List<int>> packedBars;
 }
 
+class _RedistributionOption {
+  const _RedistributionOption({
+    required this.targetIndex,
+    required this.remainingCapacity,
+  });
+
+  final int targetIndex;
+  final int remainingCapacity;
+}
+
 class _PatternState {
   const _PatternState(this.remainingCounts);
 
@@ -733,6 +1005,37 @@ class _BarPattern {
 
   final List<int> counts;
   final int adjustedUsed;
+}
+
+class _ExactSearchState {
+  const _ExactSearchState({
+    required this.remainingCounts,
+    required this.barsLeft,
+  });
+
+  final List<int> remainingCounts;
+  final int barsLeft;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    if (other is! _ExactSearchState ||
+        other.barsLeft != barsLeft ||
+        other.remainingCounts.length != remainingCounts.length) {
+      return false;
+    }
+    for (var index = 0; index < remainingCounts.length; index++) {
+      if (other.remainingCounts[index] != remainingCounts[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(barsLeft, Object.hashAll(remainingCounts));
 }
 
 Map<String, dynamic> optimizeCutsInBackground(Map<String, dynamic> payload) {

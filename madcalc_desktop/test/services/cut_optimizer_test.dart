@@ -125,17 +125,11 @@ void main() {
       );
 
       expect(result.barCount, 3);
+      expect(result.bars.every((bar) => bar.usedLengthMm <= 80), isTrue);
+      expect(result.totalWasteMm, 75);
       expect(
-        result.bars.map((bar) => bar.cutsMm).toList(),
-        equals([
-          [70, 10],
-          [60, 15],
-          [10],
-        ]),
-      );
-      expect(
-        result.bars.map((bar) => bar.usedLengthMm).toList(),
-        equals([80, 75, 10]),
+        result.bars.fold<int>(0, (sum, bar) => sum + bar.usedLengthMm),
+        165,
       );
     });
 
@@ -161,6 +155,34 @@ void main() {
         expect(result.barCount, greaterThan(0));
         expect(result.bars.every((bar) => bar.usedLengthMm <= 6000), isTrue);
         expect(stopwatch.elapsedMilliseconds, lessThan(2500));
+      },
+    );
+
+    test(
+      'smaller saw thickness does not increase bar count on regression case',
+      () {
+        final optimizer = CutOptimizer();
+        final items = [
+          CutItem(id: 'a', lengthMm: 1797, quantity: 6),
+          CutItem(id: 'b', lengthMm: 1917, quantity: 9),
+          CutItem(id: 'c', lengthMm: 904, quantity: 6),
+          CutItem(id: 'd', lengthMm: 1366, quantity: 7),
+          CutItem(id: 'e', lengthMm: 478, quantity: 8),
+          CutItem(id: 'f', lengthMm: 2633, quantity: 3),
+          CutItem(id: 'g', lengthMm: 535, quantity: 9),
+        ];
+
+        final lowKerf = optimizer.optimize(
+          items: items,
+          settings: const CutSettings(stockLengthMm: 6000, sawThicknessMm: 2),
+        );
+        final highKerf = optimizer.optimize(
+          items: items,
+          settings: const CutSettings(stockLengthMm: 6000, sawThicknessMm: 5),
+        );
+
+        expect(lowKerf.barCount, lessThanOrEqualTo(highKerf.barCount));
+        expect(lowKerf.barCount, 10);
       },
     );
   });
