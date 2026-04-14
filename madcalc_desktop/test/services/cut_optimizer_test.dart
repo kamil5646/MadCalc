@@ -138,6 +138,31 @@ void main() {
         equals([80, 75, 10]),
       );
     });
+
+    test(
+      'finishes larger batches quickly instead of hanging on exact search',
+      () {
+        final optimizer = CutOptimizer();
+        final stopwatch = Stopwatch()..start();
+
+        final result = optimizer.optimize(
+          items: [
+            CutItem(id: 'a', lengthMm: 2350, quantity: 12),
+            CutItem(id: 'b', lengthMm: 1820, quantity: 10),
+            CutItem(id: 'c', lengthMm: 1270, quantity: 14),
+            CutItem(id: 'd', lengthMm: 940, quantity: 18),
+            CutItem(id: 'e', lengthMm: 610, quantity: 16),
+          ],
+          settings: const CutSettings(stockLengthMm: 6000, sawThicknessMm: 3),
+        );
+
+        stopwatch.stop();
+
+        expect(result.barCount, greaterThan(0));
+        expect(result.bars.every((bar) => bar.usedLengthMm <= 6000), isTrue);
+        expect(stopwatch.elapsedMilliseconds, lessThan(2500));
+      },
+    );
   });
 }
 

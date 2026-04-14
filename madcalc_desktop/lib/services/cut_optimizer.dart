@@ -13,6 +13,12 @@ class CutOptimizationException implements Exception {
 }
 
 class CutOptimizer {
+  static const int _maxExactCutCount = 24;
+  static const int _maxExactUniqueLengths = 8;
+  static const int _maxExactBarCount = 10;
+  static const int _maxVisitedStates = 60000;
+  static const int _maxGeneratedPatterns = 180000;
+
   OptimizationResult optimize({
     required List<CutItem> items,
     required CutSettings settings,
@@ -25,12 +31,15 @@ class CutOptimizer {
       cuts: cuts,
       settings: settings,
     );
-    final exactPacking = _findOptimalPacking(
-      cuts: cuts,
-      settings: settings,
-      lowerBound: minimumBarCount,
-      upperBoundBars: heuristicBars,
-    );
+    final exactPacking =
+        _shouldRunExactSearch(cuts: cuts, heuristicBars: heuristicBars)
+        ? _findOptimalPacking(
+            cuts: cuts,
+            settings: settings,
+            lowerBound: minimumBarCount,
+            upperBoundBars: heuristicBars,
+          )
+        : null;
 
     final bars = exactPacking != null
         ? _buildBarPlans(cutsByBar: exactPacking, settings: settings)
@@ -178,6 +187,15 @@ class CutOptimizer {
     final currentPatterns = <_BarPattern>[];
     final patternCache = <_PatternState, List<_BarPattern>>{};
     final bestBarsUsedForState = <_PatternState, int>{};
+    var visitedStates = 0;
+    var generatedPatterns = 0;
+
+    void guardBudget() {
+      if (visitedStates > _maxVisitedStates ||
+          generatedPatterns > _maxGeneratedPatterns) {
+        throw const _SearchBudgetExceeded();
+      }
+    }
 
     int lowerBoundFor(List<int> counts) {
       var remainingAdjustedWeight = 0;
@@ -248,6 +266,7 @@ class CutOptimizer {
       final generated = <_BarPattern>[];
 
       void buildPattern(int index, int adjustedUsed) {
+        guardBudget();
         if (index == lengths.length) {
           final remainingCapacity = adjustedCapacity - adjustedUsed;
           if (!hasRemainingCutThatFits(
@@ -255,6 +274,7 @@ class CutOptimizer {
             selectedCounts: selectedCounts,
             remainingCapacity: remainingCapacity,
           )) {
+            generatedPatterns++;
             generated.add(
               _BarPattern(
                 counts: List<int>.from(selectedCounts),
@@ -297,6 +317,8 @@ class CutOptimizer {
     }
 
     void search(_PatternState state, int barsUsed) {
+      visitedStates++;
+      guardBudget();
       if (barsUsed > bestBarCount) {
         return;
       }
@@ -345,7 +367,11 @@ class CutOptimizer {
       }
     }
 
-    search(_PatternState(initialCounts), 0);
+    try {
+      search(_PatternState(initialCounts), 0);
+    } on _SearchBudgetExceeded {
+      // Zwracamy najlepszy dotąd układ albo bezpiecznie spadamy do heurystyki.
+    }
     if (bestBarCount < upperBoundBars.length ||
         _isBetterPacking(
           candidate: bestPacking,
@@ -355,6 +381,23 @@ class CutOptimizer {
       return bestPacking;
     }
     return null;
+  }
+
+  bool _shouldRunExactSearch({
+    required List<int> cuts,
+    required List<BarPlan> heuristicBars,
+  }) {
+    if (cuts.length > _maxExactCutCount) {
+      return false;
+    }
+    if (heuristicBars.length > _maxExactBarCount) {
+      return false;
+    }
+    final uniqueLengths = cuts.toSet().length;
+    if (uniqueLengths > _maxExactUniqueLengths) {
+      return false;
+    }
+    return true;
   }
 
   List<BarPlan> _buildBarPlans({
@@ -587,4 +630,8 @@ Map<String, dynamic> optimizeCutsInBackground(Map<String, dynamic> payload) {
   );
   final optimizer = CutOptimizer();
   return optimizer.optimize(items: items, settings: settings).toJson();
+}
+
+class _SearchBudgetExceeded implements Exception {
+  const _SearchBudgetExceeded();
 }
