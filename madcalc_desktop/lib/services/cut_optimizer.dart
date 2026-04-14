@@ -13,7 +13,7 @@ class CutOptimizationException implements Exception {
 }
 
 class CutOptimizer {
-  static const int _maxExactUniqueLengths = 8;
+  static const int _maxExactUniqueLengths = 10;
   static const int _maxExactBarCount = 12;
   static const int _maxVisitedStates = 60000;
   static const int _maxGeneratedPatterns = 180000;

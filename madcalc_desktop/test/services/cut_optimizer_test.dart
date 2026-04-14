@@ -185,6 +185,29 @@ void main() {
         expect(lowKerf.barCount, 10);
       },
     );
+
+    test('finds the optimal bar count on a harder ten-piece case', () {
+      final optimizer = CutOptimizer();
+
+      final result = optimizer.optimize(
+        items: [
+          CutItem(id: 'a', lengthMm: 84, quantity: 1),
+          CutItem(id: 'b', lengthMm: 54, quantity: 1),
+          CutItem(id: 'c', lengthMm: 53, quantity: 1),
+          CutItem(id: 'd', lengthMm: 52, quantity: 1),
+          CutItem(id: 'e', lengthMm: 42, quantity: 1),
+          CutItem(id: 'f', lengthMm: 39, quantity: 1),
+          CutItem(id: 'g', lengthMm: 27, quantity: 1),
+          CutItem(id: 'h', lengthMm: 18, quantity: 1),
+          CutItem(id: 'i', lengthMm: 10, quantity: 1),
+          CutItem(id: 'j', lengthMm: 6, quantity: 1),
+        ],
+        settings: const CutSettings(stockLengthMm: 100, sawThicknessMm: 1),
+      );
+
+      expect(result.barCount, 4);
+      expect(result.bars.every((bar) => bar.usedLengthMm <= 100), isTrue);
+    });
   });
 }
 
