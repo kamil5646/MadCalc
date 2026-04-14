@@ -121,14 +121,26 @@ class CutOptimizer {
     required List<int> cuts,
     required CutSettings settings,
   }) {
+    final packedCuts = _packCutsGreedy(
+      cuts: cuts,
+      settings: settings,
+      useLookahead: true,
+    );
+    return _buildBarPlans(cutsByBar: packedCuts, settings: settings);
+  }
+
+  List<List<int>> _packCutsGreedy({
+    required List<int> cuts,
+    required CutSettings settings,
+    required bool useLookahead,
+  }) {
     final remaining = cuts.toList();
-    final bars = <BarPlan>[];
+    final bars = <List<int>>[];
 
     while (remaining.isNotEmpty) {
-      final selection = _findBestCombination(
-        remaining: remaining,
-        settings: settings,
-      );
+      final selection = useLookahead
+          ? _findSmartCombination(remaining: remaining, settings: settings)
+          : _findBestCombination(remaining: remaining, settings: settings);
       if (selection.indices.isEmpty) {
         throw CutOptimizationException(
           'Nie udało się ułożyć planu cięcia dla podanych danych.',
@@ -142,18 +154,59 @@ class CutOptimizer {
         remaining.removeAt(index);
       }
 
-      bars.add(
-        BarPlan(
-          barIndex: bars.length + 1,
-          name: '',
-          cutsMm: selectedCuts,
-          usedLengthMm: selection.usedLengthMm,
-          wasteMm: selection.wasteMm,
-        ),
-      );
+      bars.add(selectedCuts);
     }
 
     return bars;
+  }
+
+  _BarSelection _findSmartCombination({
+    required List<int> remaining,
+    required CutSettings settings,
+  }) {
+    final candidateLimit = remaining.length <= 12 ? 5 : 3;
+    final candidates = _findTopCombinations(
+      remaining: remaining,
+      settings: settings,
+      limit: candidateLimit,
+    );
+
+    if (candidates.isEmpty) {
+      return const _BarSelection(indices: [], usedLengthMm: 0, wasteMm: 0);
+    }
+    if (candidates.length == 1 || remaining.length <= 6) {
+      return candidates.first;
+    }
+
+    _ScoredSelection? best;
+    for (final candidate in candidates) {
+      final nextRemaining = _removeSelectedCuts(
+        remaining: remaining,
+        selectedIndices: candidate.indices,
+      );
+      final completion = _packCutsGreedy(
+        cuts: nextRemaining,
+        settings: settings,
+        useLookahead: false,
+      );
+      final candidateCuts = [
+        for (final index in candidate.indices) remaining[index],
+      ];
+      final simulatedPacking = _normalizePacking(
+        cutsByBar: [candidateCuts, ...completion],
+        settings: settings,
+      );
+      final score = _ScoredSelection(
+        selection: candidate,
+        packedBars: simulatedPacking,
+      );
+
+      if (best == null || _isBetterScoredSelection(score, best, settings)) {
+        best = score;
+      }
+    }
+
+    return best?.selection ?? candidates.first;
   }
 
   List<List<int>>? _findOptimalPacking({
@@ -175,10 +228,7 @@ class CutOptimizer {
     ];
 
     final initialPacking = _normalizePacking(
-      cutsByBar: [
-        for (final bar in upperBoundBars)
-          [...bar.cutsMm]..sort((left, right) => right.compareTo(left)),
-      ],
+      cutsByBar: [for (final bar in upperBoundBars) bar.cutsMm],
       settings: settings,
     );
     var bestBarCount = upperBoundBars.length;
@@ -496,6 +546,21 @@ class CutOptimizer {
     required List<int> remaining,
     required CutSettings settings,
   }) {
+    final combinations = _findTopCombinations(
+      remaining: remaining,
+      settings: settings,
+      limit: 1,
+    );
+    return combinations.isEmpty
+        ? const _BarSelection(indices: [], usedLengthMm: 0, wasteMm: 0)
+        : combinations.first;
+  }
+
+  List<_BarSelection> _findTopCombinations({
+    required List<int> remaining,
+    required CutSettings settings,
+    required int limit,
+  }) {
     final adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm;
     var states = <int, _BarSelection>{
       0: const _BarSelection(indices: [], usedLengthMm: 0, wasteMm: 0),
@@ -538,16 +603,16 @@ class CutOptimizer {
       states = nextStates;
     }
 
-    var best = const _BarSelection(indices: [], usedLengthMm: 0, wasteMm: 0);
-    for (final candidate in states.values.where(
-      (selection) => selection.indices.isNotEmpty,
-    )) {
-      if (best.indices.isEmpty ||
-          _isBetter(candidate: candidate, currentBest: best)) {
-        best = candidate;
-      }
+    final candidates =
+        states.values
+            .where((selection) => selection.indices.isNotEmpty)
+            .toList(growable: false)
+          ..sort(_compareSelections);
+
+    if (candidates.length <= limit) {
+      return candidates;
     }
-    return best;
+    return candidates.take(limit).toList(growable: false);
   }
 
   bool _isBetter({
@@ -574,6 +639,48 @@ class CutOptimizer {
 
     return false;
   }
+
+  int _compareSelections(_BarSelection left, _BarSelection right) {
+    if (_isBetter(candidate: left, currentBest: right)) {
+      return -1;
+    }
+    if (_isBetter(candidate: right, currentBest: left)) {
+      return 1;
+    }
+    return 0;
+  }
+
+  List<int> _removeSelectedCuts({
+    required List<int> remaining,
+    required List<int> selectedIndices,
+  }) {
+    final next = remaining.toList();
+    for (final index in selectedIndices.reversed) {
+      next.removeAt(index);
+    }
+    return next;
+  }
+
+  bool _isBetterScoredSelection(
+    _ScoredSelection candidate,
+    _ScoredSelection current,
+    CutSettings settings,
+  ) {
+    if (candidate.packedBars.length != current.packedBars.length) {
+      return candidate.packedBars.length < current.packedBars.length;
+    }
+    if (_isBetterPacking(
+      candidate: candidate.packedBars,
+      current: current.packedBars,
+      settings: settings,
+    )) {
+      return true;
+    }
+    return _isBetter(
+      candidate: candidate.selection,
+      currentBest: current.selection,
+    );
+  }
 }
 
 class _BarSelection {
@@ -586,6 +693,13 @@ class _BarSelection {
   final List<int> indices;
   final int usedLengthMm;
   final int wasteMm;
+}
+
+class _ScoredSelection {
+  const _ScoredSelection({required this.selection, required this.packedBars});
+
+  final _BarSelection selection;
+  final List<List<int>> packedBars;
 }
 
 class _PatternState {
