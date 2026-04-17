@@ -11,10 +11,12 @@ import '../models/bar_plan.dart';
 import '../models/calculation_history_entry.dart';
 import '../models/cut_item.dart';
 import '../models/cut_settings.dart';
+import '../models/local_ai_analysis.dart';
 import '../models/measurement_unit.dart';
 import '../models/optimization_result.dart';
 import '../services/app_update_service.dart';
 import '../services/cut_optimizer.dart';
+import '../services/local_ai_analysis_service.dart';
 import '../services/pdf_report_builder.dart';
 import '../services/state_persistence.dart';
 
@@ -22,8 +24,11 @@ class MadCalcController extends ChangeNotifier {
   MadCalcController({
     StatePersistence? persistence,
     AppUpdateService? updateService,
+    LocalAiAnalysisService? localAiAnalysisService,
   }) : _persistence = persistence ?? StatePersistence(),
-       _updateService = updateService ?? AppUpdateService();
+       _updateService = updateService ?? AppUpdateService(),
+       _localAiAnalysisService =
+           localAiAnalysisService ?? LocalAiAnalysisService();
 
   static Future<MadCalcController> create() async {
     final controller = MadCalcController();
@@ -33,6 +38,7 @@ class MadCalcController extends ChangeNotifier {
 
   final StatePersistence _persistence;
   final AppUpdateService _updateService;
+  final LocalAiAnalysisService _localAiAnalysisService;
 
   MeasurementUnit unit = MeasurementUnit.centimeters;
   String itemLengthInput = '';
@@ -41,6 +47,7 @@ class MadCalcController extends ChangeNotifier {
   String sawThicknessInput = '0,3';
   List<CutItem> items = <CutItem>[];
   OptimizationResult? result;
+  LocalAiAnalysis? localAiAnalysis;
   CutSettings? generatedSettings;
   DateTime? generatedAt;
   bool isGenerating = false;
@@ -127,6 +134,7 @@ class MadCalcController extends ChangeNotifier {
           !historyEntries.any((entry) => entry.id == _activeHistoryEntryId)) {
         _activeHistoryEntryId = null;
       }
+      _refreshLocalAiAnalysis();
     }
   }
 
@@ -252,6 +260,7 @@ class MadCalcController extends ChangeNotifier {
       to: nextUnit,
     );
     unit = nextUnit;
+    _refreshLocalAiAnalysis();
     _syncActiveHistoryEntryWithCurrentState();
     _persistLater();
     notifyListeners();
@@ -323,6 +332,7 @@ class MadCalcController extends ChangeNotifier {
     sawThicknessInput = '0,3';
     items = <CutItem>[];
     result = null;
+    localAiAnalysis = null;
     generatedSettings = null;
     generatedAt = null;
     lastExportPath = null;
@@ -387,6 +397,7 @@ class MadCalcController extends ChangeNotifier {
       result = optimized.copyWith(bars: namedBars);
       generatedSettings = settings;
       generatedAt = DateTime.now();
+      _refreshLocalAiAnalysis();
       lastExportPath = null;
       _saveCurrentCalculationToHistory();
       _persistLater();
@@ -518,6 +529,7 @@ class MadCalcController extends ChangeNotifier {
     result = entry.result;
     generatedSettings = entry.settings;
     generatedAt = entry.generatedAt;
+    _refreshLocalAiAnalysis();
     lastExportPath = null;
     _editingItemId = null;
     itemLengthInput = '';
@@ -589,10 +601,27 @@ class MadCalcController extends ChangeNotifier {
 
   void _invalidateGeneratedResult() {
     result = null;
+    localAiAnalysis = null;
     generatedSettings = null;
     generatedAt = null;
     lastExportPath = null;
     _activeHistoryEntryId = null;
+  }
+
+  void _refreshLocalAiAnalysis() {
+    final currentResult = result;
+    final currentSettings = generatedSettings;
+    if (currentResult == null || currentSettings == null) {
+      localAiAnalysis = null;
+      return;
+    }
+
+    localAiAnalysis = _localAiAnalysisService.analyze(
+      items: items,
+      settings: currentSettings,
+      result: currentResult,
+      unit: unit,
+    );
   }
 
   void _persistLater() {

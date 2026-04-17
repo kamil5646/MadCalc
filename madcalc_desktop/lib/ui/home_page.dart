@@ -7,6 +7,7 @@ import '../models/app_update_info.dart';
 import '../models/bar_plan.dart';
 import '../models/calculation_history_entry.dart';
 import '../models/cut_item.dart';
+import '../models/local_ai_analysis.dart';
 import '../models/measurement_unit.dart';
 
 class HomePage extends StatefulWidget {
@@ -433,8 +434,8 @@ class _HomePageState extends State<HomePage> {
         _Panel(
           title: 'Wynik',
           subtitle: result == null
-              ? 'Po wygenerowaniu zobaczysz liczbę sztang, odpad i pełny plan cięcia.'
-              : 'Możesz nazywać sztangi i te nazwy trafią też do PDF.',
+              ? 'Po wygenerowaniu zobaczysz liczbę sztang, odpad, pełny plan cięcia i lokalną analizę AI.'
+              : 'Możesz nazywać sztangi, a lokalny asystent AI od razu opisze jakość planu.',
           child: result == null
               ? const _EmptyState(
                   icon: Icons.inventory_2_outlined,
@@ -464,6 +465,10 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
+                    if (controller.localAiAnalysis != null) ...[
+                      const SizedBox(height: 18),
+                      _AiAnalysisCard(analysis: controller.localAiAnalysis!),
+                    ],
                     const SizedBox(height: 18),
                     for (
                       var index = 0;
@@ -668,6 +673,10 @@ class _HeroPanel extends StatelessWidget {
               runSpacing: 10,
               children: [
                 _HeroBadge(icon: Icons.cloud_off_rounded, label: 'Offline'),
+                _HeroBadge(
+                  icon: Icons.psychology_alt_rounded,
+                  label: 'AI lokalne',
+                ),
                 _HeroBadge(icon: Icons.picture_as_pdf_rounded, label: 'PDF'),
                 _HeroBadge(
                   icon: Icons.desktop_windows_rounded,
@@ -1041,6 +1050,188 @@ class _MetricTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AiAnalysisCard extends StatelessWidget {
+  const _AiAnalysisCard({required this.analysis});
+
+  final LocalAiAnalysis analysis;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final accentColor = analysis.hasWarnings
+        ? const Color(0xFFB46A25)
+        : const Color(0xFF2F7A57);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            accentColor.withValues(alpha: 0.16),
+            colorScheme.surfaceContainerHighest,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.psychology_alt_rounded,
+                      size: 18,
+                      color: accentColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Asystent AI lokalnie',
+                      style: TextStyle(
+                        color: accentColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _MetricTile(label: 'Ocena', value: '${analysis.score}/100'),
+              _MetricTile(label: 'Status', value: analysis.statusLabel),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            analysis.headline,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            analysis.summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.45,
+            ),
+          ),
+          if (analysis.highlights.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _AiSection(
+              title: 'Mocne strony',
+              icon: Icons.check_circle_outline_rounded,
+              items: analysis.highlights,
+              color: const Color(0xFF2F7A57),
+            ),
+          ],
+          if (analysis.warnings.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _AiSection(
+              title: 'Ryzyka',
+              icon: Icons.warning_amber_rounded,
+              items: analysis.warnings,
+              color: const Color(0xFFB46A25),
+            ),
+          ],
+          if (analysis.suggestions.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _AiSection(
+              title: 'Podpowiedzi',
+              icon: Icons.tips_and_updates_outlined,
+              items: analysis.suggestions,
+              color: const Color(0xFF1D4F82),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AiSection extends StatelessWidget {
+  const _AiSection({
+    required this.title,
+    required this.icon,
+    required this.items,
+    required this.color,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<String> items;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        for (final item in items)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: colorScheme.outlineVariant),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Icon(Icons.circle, size: 8, color: color),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
