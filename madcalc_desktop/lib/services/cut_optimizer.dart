@@ -12,13 +12,55 @@ class CutOptimizationException implements Exception {
   String toString() => message;
 }
 
+class CutOptimizerProfile {
+  const CutOptimizerProfile({
+    required this.maxExactUniqueLengths,
+    required this.maxExactBarCount,
+    required this.maxVisitedStates,
+    required this.maxGeneratedPatterns,
+    required this.maxLocalRepackCuts,
+    required this.maxLocalRepackBarsToInspect,
+    required this.smartCandidateLimitSmall,
+    required this.smartCandidateLimitLarge,
+  });
+
+  static const standard = CutOptimizerProfile(
+    maxExactUniqueLengths: 10,
+    maxExactBarCount: 12,
+    maxVisitedStates: 60000,
+    maxGeneratedPatterns: 180000,
+    maxLocalRepackCuts: 18,
+    maxLocalRepackBarsToInspect: 8,
+    smartCandidateLimitSmall: 5,
+    smartCandidateLimitLarge: 3,
+  );
+
+  static const desktopAi = CutOptimizerProfile(
+    maxExactUniqueLengths: 14,
+    maxExactBarCount: 16,
+    maxVisitedStates: 220000,
+    maxGeneratedPatterns: 720000,
+    maxLocalRepackCuts: 24,
+    maxLocalRepackBarsToInspect: 12,
+    smartCandidateLimitSmall: 7,
+    smartCandidateLimitLarge: 5,
+  );
+
+  final int maxExactUniqueLengths;
+  final int maxExactBarCount;
+  final int maxVisitedStates;
+  final int maxGeneratedPatterns;
+  final int maxLocalRepackCuts;
+  final int maxLocalRepackBarsToInspect;
+  final int smartCandidateLimitSmall;
+  final int smartCandidateLimitLarge;
+}
+
 class CutOptimizer {
-  static const int _maxExactUniqueLengths = 10;
-  static const int _maxExactBarCount = 12;
-  static const int _maxVisitedStates = 60000;
-  static const int _maxGeneratedPatterns = 180000;
-  static const int _maxLocalRepackCuts = 18;
-  static const int _maxLocalRepackBarsToInspect = 8;
+  CutOptimizer({CutOptimizerProfile? profile})
+    : _profile = profile ?? CutOptimizerProfile.standard;
+
+  final CutOptimizerProfile _profile;
 
   OptimizationResult optimize({
     required List<CutItem> items,
@@ -176,21 +218,31 @@ class CutOptimizer {
         cutsByBar: current,
         settings: settings,
       );
-      if (reduced == null) {
-        final locallyRepacked = _tryLocalRepack(
-          cutsByBar: current,
-          settings: settings,
-        );
-        if (locallyRepacked == null) {
-          return current;
-        }
+      if (reduced != null) {
+        current = _normalizePacking(cutsByBar: reduced, settings: settings);
+        continue;
+      }
+
+      final locallyRepacked = _tryLocalRepack(
+        cutsByBar: current,
+        settings: settings,
+      );
+      if (locallyRepacked != null) {
         current = _normalizePacking(
           cutsByBar: locallyRepacked,
           settings: settings,
         );
         continue;
       }
-      current = _normalizePacking(cutsByBar: reduced, settings: settings);
+
+      final concentrated = _tryConcentrateWaste(
+        cutsByBar: current,
+        settings: settings,
+      );
+      if (concentrated == null) {
+        return current;
+      }
+      current = _normalizePacking(cutsByBar: concentrated, settings: settings);
     }
   }
 
@@ -249,7 +301,7 @@ class CutOptimizer {
           });
 
     final inspected = candidateIndices
-        .take(_maxLocalRepackBarsToInspect)
+        .take(_profile.maxLocalRepackBarsToInspect)
         .toList(growable: false);
 
     for (final subsetSize in [4, 3, 2]) {
@@ -261,7 +313,7 @@ class CutOptimizer {
         final subsetCuts = <int>[
           for (final index in subset) ...cutsByBar[index],
         ];
-        if (subsetCuts.length > _maxLocalRepackCuts) {
+        if (subsetCuts.length > _profile.maxLocalRepackCuts) {
           continue;
         }
 
@@ -309,6 +361,116 @@ class CutOptimizer {
         ];
         remaining.addAll(repacked);
         return remaining;
+      }
+    }
+
+    return null;
+  }
+
+  List<List<int>>? _tryConcentrateWaste({
+    required List<List<int>> cutsByBar,
+    required CutSettings settings,
+  }) {
+    if (cutsByBar.length < 2) {
+      return null;
+    }
+
+    final currentPacking = _normalizePacking(
+      cutsByBar: cutsByBar,
+      settings: settings,
+    );
+    final candidateIndices =
+        List<int>.generate(cutsByBar.length, (index) => index)..sort((
+          left,
+          right,
+        ) {
+          final leftWaste =
+              settings.stockLengthMm -
+              _usedLength(cuts: cutsByBar[left], settings: settings);
+          final rightWaste =
+              settings.stockLengthMm -
+              _usedLength(cuts: cutsByBar[right], settings: settings);
+          if (leftWaste != rightWaste) {
+            return rightWaste.compareTo(leftWaste);
+          }
+          return _usedLength(
+            cuts: cutsByBar[left],
+            settings: settings,
+          ).compareTo(_usedLength(cuts: cutsByBar[right], settings: settings));
+        });
+
+    final inspected = candidateIndices
+        .take(_profile.maxLocalRepackBarsToInspect)
+        .toList(growable: false);
+
+    for (final subsetSize in [4, 3, 2]) {
+      if (inspected.length < subsetSize) {
+        continue;
+      }
+
+      for (final subset in _barIndexCombinations(inspected, subsetSize)) {
+        final subsetCuts = <int>[
+          for (final index in subset) ...cutsByBar[index],
+        ];
+        if (subsetCuts.length > _profile.maxLocalRepackCuts) {
+          continue;
+        }
+
+        final lowerBound = _minimumPossibleBarCount(
+          cuts: subsetCuts,
+          settings: settings,
+        );
+        if (lowerBound > subset.length) {
+          continue;
+        }
+
+        final upperBoundBars = [
+          for (var position = 0; position < subset.length; position++)
+            BarPlan(
+              barIndex: position + 1,
+              name: '',
+              cutsMm: [...cutsByBar[subset[position]]],
+              usedLengthMm: _usedLength(
+                cuts: cutsByBar[subset[position]],
+                settings: settings,
+              ),
+              wasteMm:
+                  settings.stockLengthMm -
+                  _usedLength(
+                    cuts: cutsByBar[subset[position]],
+                    settings: settings,
+                  ),
+            ),
+        ];
+
+        final repacked = _findOptimalPacking(
+          cuts: [...subsetCuts]..sort((left, right) => right.compareTo(left)),
+          settings: settings,
+          lowerBound: lowerBound,
+          upperBoundBars: upperBoundBars,
+          allowSameBarCountImprovement: true,
+        );
+
+        if (repacked == null) {
+          continue;
+        }
+
+        final remaining = <List<int>>[
+          for (var index = 0; index < cutsByBar.length; index++)
+            if (!subset.contains(index)) [...cutsByBar[index]],
+          ...repacked,
+        ];
+        final normalizedRemaining = _normalizePacking(
+          cutsByBar: remaining,
+          settings: settings,
+        );
+        if (_isBetterPacking(
+          candidate: normalizedRemaining,
+          current: currentPacking,
+          settings: settings,
+        )) {
+          return normalizedRemaining;
+        }
       }
     }
 
@@ -427,7 +589,9 @@ class CutOptimizer {
     required List<int> remaining,
     required CutSettings settings,
   }) {
-    final candidateLimit = remaining.length <= 12 ? 5 : 3;
+    final candidateLimit = remaining.length <= 12
+        ? _profile.smartCandidateLimitSmall
+        : _profile.smartCandidateLimitLarge;
     final candidates = _findTopCombinations(
       remaining: remaining,
       settings: settings,
@@ -477,11 +641,21 @@ class CutOptimizer {
     required CutSettings settings,
     required int lowerBound,
     required List<BarPlan> upperBoundBars,
+    bool allowSameBarCountImprovement = false,
   }) {
     final upperBoundBarCount = upperBoundBars.length;
-    if (lowerBound >= upperBoundBarCount) {
+    if (lowerBound > upperBoundBarCount) {
       return null;
     }
+    if (!allowSameBarCountImprovement && lowerBound >= upperBoundBarCount) {
+      return null;
+    }
+    final upperBoundPacking = _normalizePacking(
+      cutsByBar: [
+        for (final bar in upperBoundBars) [...bar.cutsMm],
+      ],
+      settings: settings,
+    );
 
     final adjustedCapacity = settings.stockLengthMm + settings.sawThicknessMm;
     final groupedCuts = <int, int>{};
@@ -502,8 +676,8 @@ class CutOptimizer {
     var generatedPatterns = 0;
 
     void guardBudget() {
-      if (visitedStates > _maxVisitedStates ||
-          generatedPatterns > _maxGeneratedPatterns) {
+      if (visitedStates > _profile.maxVisitedStates ||
+          generatedPatterns > _profile.maxGeneratedPatterns) {
         throw const _SearchBudgetExceeded();
       }
     }
@@ -673,9 +847,12 @@ class CutOptimizer {
     }
 
     try {
+      final maxTargetBarCount = allowSameBarCountImprovement
+          ? upperBoundBarCount
+          : upperBoundBarCount - 1;
       for (
         var targetBarCount = lowerBound;
-        targetBarCount < upperBoundBarCount;
+        targetBarCount <= maxTargetBarCount;
         targetBarCount++
       ) {
         exactCache.clear();
@@ -687,10 +864,21 @@ class CutOptimizer {
           continue;
         }
 
-        return _normalizePacking(
+        final normalizedSolution = _normalizePacking(
           cutsByBar: [for (final pattern in solution) expandPattern(pattern)],
           settings: settings,
         );
+        if (targetBarCount < upperBoundBarCount) {
+          return normalizedSolution;
+        }
+        if (_isBetterPacking(
+          candidate: normalizedSolution,
+          current: upperBoundPacking,
+          settings: settings,
+        )) {
+          return normalizedSolution;
+        }
+        return null;
       }
     } on _SearchBudgetExceeded {
       // Zwracamy najlepszy dotąd układ albo bezpiecznie spadamy do heurystyki.
@@ -702,11 +890,11 @@ class CutOptimizer {
     required List<int> cuts,
     required List<BarPlan> heuristicBars,
   }) {
-    if (heuristicBars.length > _maxExactBarCount) {
+    if (heuristicBars.length > _profile.maxExactBarCount) {
       return false;
     }
     final uniqueLengths = cuts.toSet().length;
-    if (uniqueLengths > _maxExactUniqueLengths) {
+    if (uniqueLengths > _profile.maxExactUniqueLengths) {
       return false;
     }
     return true;

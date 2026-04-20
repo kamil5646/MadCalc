@@ -17,6 +17,7 @@ import '../models/optimization_result.dart';
 import '../services/app_update_service.dart';
 import '../services/cut_optimizer.dart';
 import '../services/local_ai_analysis_service.dart';
+import '../services/local_ai_plan_generator_service.dart';
 import '../services/pdf_report_builder.dart';
 import '../services/state_persistence.dart';
 
@@ -103,6 +104,17 @@ class MadCalcController extends ChangeNotifier {
   }
 
   bool get hasHistory => historyEntries.isNotEmpty;
+
+  bool get usesDesktopLocalAiGeneration {
+    return !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+  }
+
+  String get generationModeLabel {
+    if (usesDesktopLocalAiGeneration) {
+      return 'Na tym urządzeniu MadCalc porównuje warianty lokalnie i preferuje plan z najmniejszą liczbą sztang oraz odpadem skupionym możliwie na końcu, najlepiej na jednej sztandze.';
+    }
+    return 'Na tym urządzeniu MadCalc używa szybkiego trybu standardowego.';
+  }
 
   String get versionBadgeLabel {
     final version = currentVersion;
@@ -377,9 +389,12 @@ class MadCalcController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final worker = usesDesktopLocalAiGeneration
+          ? optimizeCutsWithLocalAiInBackground
+          : optimizeCutsInBackground;
       final optimizedJson =
           await compute<Map<String, dynamic>, Map<String, dynamic>>(
-            optimizeCutsInBackground,
+            worker,
             <String, dynamic>{
               'items': items.map((item) => item.toJson()).toList(),
               'settings': settings.toJson(),

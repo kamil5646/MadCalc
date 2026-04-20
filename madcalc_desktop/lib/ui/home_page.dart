@@ -303,7 +303,7 @@ class _HomePageState extends State<HomePage> {
         _Panel(
           title: 'Parametry cięcia',
           subtitle:
-              'Pracuj w centymetrach albo milimetrach. Wynik liczymy lokalnie.',
+              'Pracuj w centymetrach albo milimetrach. Wynik liczymy lokalnie, bez internetu.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -417,6 +417,13 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                controller.generationModeLabel,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               if (controller.lastExportPath != null) ...[
                 const SizedBox(height: 14),
